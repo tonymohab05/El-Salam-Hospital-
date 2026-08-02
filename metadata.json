@@ -1,0 +1,8 @@
+{
+  "name": "El-Salam Hospital Ain Shams 2",
+  "description": "An administrative billing assistant for Emergency Rooms in Egypt. Translates medical supply usage into mathematically perfect JSON payloads optimized for direct Supabase database insertion, supporting Arabic and English.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
