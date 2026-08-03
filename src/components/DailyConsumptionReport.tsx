@@ -119,27 +119,42 @@ export default function DailyConsumptionReport({
 
   return (
     <div id="printable-consumption-report" className="flex flex-col gap-4 sm:gap-5 animate-fadeIn w-full">
-      {/* Printable-only Header with Logo */}
-      <div className="hidden print:flex flex-col items-center justify-center text-center pb-5 mb-5 border-b-2 border-slate-300 w-full font-arabic">
-        <div className="flex items-center gap-4 justify-center mb-3">
-          <HospitalLogo className="w-16 h-16 shrink-0 filter drop-shadow-sm" />
-          <div className="text-right">
-            <h1 className="text-xl font-bold text-slate-900">
-              {lang === "ar" ? "مستشفى السلام" : "El-Salam Hospital"}
-            </h1>
-            <p className="text-[10px] text-slate-500 font-bold">
-              {lang === "ar" ? "قسم الطوارئ والمستلزمات الطبية" : "Emergency Dept & Medical Supplies"}
+      {/* Printable-only Header with Logo matching standard hospital header */}
+      <div className="hidden print:block w-full font-sans mb-3">
+        <div className="grid grid-cols-3 items-center text-slate-900 pb-2">
+          {/* Left visually in RTL (English text) */}
+          <div className="text-left font-sans">
+            <h2 className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 leading-tight">
+              EL-SALAM HOSPITAL
+            </h2>
+            <p className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
+              76 Ahmed Esmat , Ain Shams
+            </p>
+          </div>
+
+          {/* Center visually: Hospital Logo */}
+          <div className="flex justify-center">
+            <HospitalLogo className="w-12 h-12 shrink-0 aspect-square" />
+          </div>
+
+          {/* Right visually in RTL (Arabic text) */}
+          <div className="text-right font-arabic">
+            <h2 className="font-black text-base sm:text-lg text-slate-900 leading-tight">
+              مستشفى السلام
+            </h2>
+            <p className="text-[11px] sm:text-xs font-bold text-slate-600 mt-0.5">
+              76 احمد عصمت عين شمس
             </p>
           </div>
         </div>
-        <div className="text-center mt-2 bg-slate-50 border border-slate-200 rounded-xl p-3 px-6 shadow-3xs inline-block">
-          <h2 className="text-sm font-black text-slate-800 tracking-wider">
-            {lang === "ar" ? "دفتر وجرد الاستهلاك اليومي للمستلزمات الطبية" : "Daily Supplies Consumption Master Report"}
-          </h2>
-          <p className="text-[11px] text-slate-650 mt-1">
-            <span className="font-bold">{lang === "ar" ? "تاريخ التقرير: " : "Report Date: "}</span>
-            <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 font-semibold">{formattedSelectedDateText}</span>
-          </p>
+        <div className="border-b-2 border-slate-900 w-full my-2" />
+      </div>
+
+      {/* Printable-only Date Badge */}
+      <div className="hidden print:flex items-center justify-start my-2">
+        <div className="inline-flex items-center gap-2 border-2 border-emerald-600 bg-emerald-50/70 text-emerald-800 font-bold px-4 py-1.5 rounded-2xl text-xs sm:text-sm font-arabic shadow-2xs">
+          <Calendar className="w-4 h-4 text-emerald-600" />
+          <span>{formattedSelectedDateText}</span>
         </div>
       </div>
 
@@ -213,7 +228,7 @@ export default function DailyConsumptionReport({
       </div>
 
       {/* KPI Stats Panel */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 print:grid print:grid-cols-3">
         {/* Metric 1 */}
         <div className="bg-white rounded-2xl sm:rounded-xl border border-slate-250 p-3.5 sm:p-4 shadow-3xs flex items-center justify-between relative overflow-hidden">
           <div className="absolute top-0 bottom-0 left-0 w-1 bg-sky-500" />
@@ -257,7 +272,7 @@ export default function DailyConsumptionReport({
           <div className="absolute top-0 bottom-0 left-0 w-1 bg-amber-500" />
           <div className={`${lang === "ar" ? "text-right" : "text-left"}`}>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight font-arabic">
-              {lang === "ar" ? "تكلفة المستلزمات الإجمالية" : "Combined Materials Value"}
+              {lang === "ar" ? "إجمالي المبلغ في الدرج" : "Total Cash Drawer Amount"}
             </span>
             <p className="text-lg sm:text-xl font-black text-emerald-700 font-mono mt-0.5 sm:mt-1">
               {formatCurrency(aggregatedData.totalCost, lang)}
@@ -284,8 +299,8 @@ export default function DailyConsumptionReport({
 
         {aggregatedData.items.length > 0 ? (
           <>
-            {/* Mobile View: Clean Responsive Cards */}
-            <div className="block sm:hidden divide-y divide-slate-100">
+            {/* Mobile View: Clean Responsive Cards (Hidden in print) */}
+            <div className="block sm:hidden print:hidden divide-y divide-slate-100">
               {aggregatedData.items.map((item, index) => (
                 <div key={`${item.id}-${index}`} className="p-3.5 hover:bg-slate-50/80 transition-colors space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
@@ -338,8 +353,8 @@ export default function DailyConsumptionReport({
               ))}
             </div>
 
-            {/* Desktop View: Full data table */}
-            <div className="hidden sm:block overflow-x-auto">
+            {/* Desktop & Print View: Full data table */}
+            <div className="hidden sm:block print:block overflow-x-auto">
               <table className="w-full text-right border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-100 text-slate-750 font-bold border-b border-slate-250 font-arabic select-none">

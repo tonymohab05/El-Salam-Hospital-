@@ -3137,29 +3137,36 @@ export default function App() {
                           }
 
                           return matches.slice(0, 8).map((item) => (
-                            <button
+                            <div
                               key={item.id}
-                              type="button"
-                              onClick={() => setEditingSelectedNewItem(item)}
-                              className="w-full p-2.5 text-right hover:bg-sky-50 flex items-center justify-between gap-3 text-xs cursor-pointer transition-colors"
+                              className="p-2.5 text-right hover:bg-sky-50/80 flex items-center justify-between gap-3 text-xs transition-colors"
                             >
                               <div>
                                 <span className="font-bold text-slate-800 block">
                                   {lang === "ar" ? item.name_ar : item.name_en}
                                 </span>
                                 <span className="text-[10.5px] text-slate-400 font-mono">
-                                  {lang === "ar" ? item.category_ar : item.category_en}
-                                </span>
-                              </div>
-                              <div className="text-left font-mono shrink-0">
-                                <span className="font-bold text-emerald-600 block">
-                                  {formatCurrency(item.unit_price, lang)}
-                                </span>
-                                <span className="text-[10px] text-slate-500">
+                                  {lang === "ar" ? item.category_ar : item.category_en} |{" "}
                                   {lang === "ar" ? `الرصيد: ${item.stock}` : `Stock: ${item.stock}`}
                                 </span>
                               </div>
-                            </button>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="font-bold text-emerald-600 font-mono text-xs">
+                                  {formatCurrency(item.unit_price, lang)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleAddItemToEditingInvoice(item, 1);
+                                    setEditingInvoiceSearchQuery("");
+                                  }}
+                                  className="px-2.5 py-1 bg-hospital-blue hover:bg-sky-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 shadow-xs cursor-pointer"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>{lang === "ar" ? "إضافة" : "Add"}</span>
+                                </button>
+                              </div>
+                            </div>
                           ));
                         })()}
                       </div>
@@ -4726,7 +4733,7 @@ export default function App() {
 
                         {/* Center visually: Hospital Logo */}
                         <div className="flex justify-center">
-                          <HospitalLogo className="w-14 h-14 md:w-16 md:h-16 text-hospital-blue filter drop-shadow-sm" />
+                          <HospitalLogo className="w-14 h-14 md:w-16 md:h-16 shrink-0 aspect-square" />
                         </div>
 
                         {/* Right visually: Arabic details */}
@@ -7224,7 +7231,7 @@ export default function App() {
 
                 {/* Center visually: Hospital Logo */}
                 <div className="flex justify-center">
-                  <HospitalLogo className="w-10 h-10 md:w-12 md:h-12 text-hospital-blue filter drop-shadow-sm" />
+                  <HospitalLogo className="w-10 h-10 md:w-12 md:h-12 shrink-0 aspect-square" />
                 </div>
 
                 {/* Right visually: Arabic details */}
@@ -7463,7 +7470,7 @@ export default function App() {
 
                         {/* Center visually: Hospital Logo */}
                         <div className="flex justify-center">
-                          <HospitalLogo className="w-10 h-10 md:w-12 md:h-12 text-hospital-blue filter drop-shadow-sm" />
+                          <HospitalLogo className="w-10 h-10 md:w-12 md:h-12 shrink-0 aspect-square" />
                         </div>
 
                         {/* Right visually: Arabic details */}
