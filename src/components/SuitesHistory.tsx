@@ -1,5 +1,6 @@
 import React from "react";
-import { History, Search, ArrowUpRight, Trash2, Calendar, ShoppingBag, Database, FileText, Pencil, Printer, Download, FileDown, SlidersHorizontal, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { History, Search, ArrowUpRight, Trash2, Calendar, ShoppingBag, Database, FileText, Pencil, Printer, Download, FileDown, FileSpreadsheet, SlidersHorizontal, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight } from "lucide-react";
+import * as XLSX from "xlsx";
 import { InvoicePayload, Language } from "../types";
 import { formatCurrency } from "../utils";
 
@@ -48,6 +49,74 @@ export default function SuitesHistory({
   // States for checkbox batch selection and options modals
   const [selectedInvoiceIds, setSelectedInvoiceIds] = React.useState<string[]>([]);
   const [showPrintOptions, setShowPrintOptions] = React.useState<boolean>(false);
+
+  // Excel Export Handler for selected or filtered invoices
+  const handleExportInvoicesToExcel = (targets: InvoicePayload[]) => {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: كشف فواتير المرضى (إجمالي)
+      const summaryData = targets.map((record, index) => {
+        const itemsDetail = record.invoice_lines
+          .map(
+            (l) =>
+              `${l.item_name_ar || l.item_name_en} (${l.unit_price} ج.م × ${l.quantity} = ${l.line_total} ج.م)`
+          )
+          .join(" | ");
+
+        const totalQty = record.invoice_lines.reduce((s, l) => s + l.quantity, 0);
+
+        const formattedDate = record.created_at
+          ? new Date(record.created_at).toLocaleString("ar-EG")
+          : "غير محدد";
+
+        return {
+          "م": index + 1,
+          "اسم المريض": record.patient_name || "بدون اسم",
+          "رقم الإيصال / المرجع": record.receipt_number || "-",
+          "تاريخ ووقت المعاملة": formattedDate,
+          "بيان المستلزمات والكميات والأسعار": itemsDetail,
+          "إجمالي عدد القطع": totalQty,
+          "إجمالي قيمة الفاتورة (ج.م)": record.grand_total,
+          "منفذ الصرف المالي": record.billing_officer_email || "-",
+        };
+      });
+
+      const ws1 = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, ws1, "كشف فواتير المرضى");
+
+      // Sheet 2: تفاصيل بنود فواتير المرضى (Itemized)
+      const itemizedRows: any[] = [];
+      let rowIdx = 1;
+      targets.forEach((record) => {
+        const formattedDate = record.created_at
+          ? new Date(record.created_at).toLocaleString("ar-EG")
+          : "غير محدد";
+
+        record.invoice_lines.forEach((line) => {
+          itemizedRows.push({
+            "م": rowIdx++,
+            "رقم الإيصال": record.receipt_number || "-",
+            "اسم المريض": record.patient_name || "بدون اسم",
+            "تاريخ ووقت المعاملة": formattedDate,
+            "كود المستلزم": line.item_id,
+            "اسم المستلزم الطبي": line.item_name_ar || line.item_name_en,
+            "سعر المفرد (ج.م)": line.unit_price,
+            "الكمية المصروفة": line.quantity,
+            "إجمالي البند (ج.م)": line.line_total,
+          });
+        });
+      });
+
+      const ws2 = XLSX.utils.json_to_sheet(itemizedRows);
+      XLSX.utils.book_append_sheet(wb, ws2, "تفاصيل بنود الفواتير");
+
+      const todayStr = new Date().toISOString().split("T")[0];
+      XLSX.writeFile(wb, `فواتير_المرضى_مستشفى_السلام_${todayStr}.xlsx`);
+    } catch (err) {
+      console.error("Error exporting invoices to excel:", err);
+    }
+  };
 
   // Find maximum amount in history dynamically to establish the upper bound of the dual range slider
   const sliderMaxCeiling = React.useMemo(() => {
@@ -830,7 +899,7 @@ export default function SuitesHistory({
         </div>
       )}
 
-      {/* Choice Prompt Wizard Overlay Modal for Multiple Printing/Saving as PDF */}
+      {/* Choice Prompt Wizard Overlay Modal for Multiple Printing/Saving as Excel */}
       {showPrintOptions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-150 overflow-hidden text-right font-arabic">
@@ -845,7 +914,7 @@ export default function SuitesHistory({
               <h3 className="text-sm font-bold flex items-center gap-2">
                 <Printer className="w-4 h-4" />
                 <span>
-                  {currentLang === "ar" ? "خيارات تصدير الفواتير أو حفظها كـ PDF" : "Print Invoices or Download PDF"}
+                  {currentLang === "ar" ? "خيارات طباعة وتصدير الفواتير" : "Print Invoices or Export to Excel"}
                 </span>
               </h3>
             </div>
@@ -889,40 +958,31 @@ export default function SuitesHistory({
                   </div>
                 </button>
 
-                {/* Option 2: Save as PDF document */}
+                {/* Option 2: Save / Export to Excel */}
                 <button
                   type="button"
-                  id="choice-download-pdf"
+                  id="choice-download-excel"
                   onClick={() => {
                     setShowPrintOptions(false);
-                    if (onPrintBatch) {
-                      const targets = selectedInvoiceIds.length > 0
-                        ? history.filter(h => selectedInvoiceIds.includes(h.receipt_number))
-                        : filteredHistory;
-                      onPrintBatch(targets);
-                    }
+                    const targets = selectedInvoiceIds.length > 0
+                      ? history.filter(h => selectedInvoiceIds.includes(h.receipt_number))
+                      : filteredHistory;
+                    handleExportInvoicesToExcel(targets);
                   }}
                   className="p-4 border-2 border-emerald-250 hover:border-emerald-500 hover:bg-emerald-50/15 rounded-xl transition-all text-center flex flex-col items-center gap-2.5 group cursor-pointer"
                 >
                   <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-full group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                    <FileDown className="w-5 h-5" />
+                    <FileSpreadsheet className="w-5 h-5" />
                   </div>
                   <div>
                     <span className="block text-xs font-black text-slate-800">
-                      {currentLang === "ar" ? "تصدير وحفظ كـ PDF" : "Save as / Download PDF"}
+                      {currentLang === "ar" ? "تصدير كـ ملف Excel" : "Export to Excel (.xlsx)"}
                     </span>
                     <span className="block text-[10.5px] text-slate-400 mt-0.5">
-                      {currentLang === "ar" ? "تحميل فواتير اليوم مجمعة" : "Download collective PDF"}
+                      {currentLang === "ar" ? "تحميل كشف فواتير المرضى بالتفصيل" : "Download invoices spreadsheet"}
                     </span>
                   </div>
                 </button>
-              </div>
-
-              {/* Pro Tip */}
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-250 text-[11.5px] text-amber-800 leading-relaxed font-semibold">
-                {currentLang === "ar"
-                  ? "💡 تلميح: عند اختيار 'تصدير وحفظ كـ PDF' ستظهر نافذة طباعة مجمعة سهلة، يرجى تعيين 'الوجهة' (Destination) في الحقل العلوي إلى 'حفظ بتنسيق PDF' (Save as PDF) ثم اضغط حفظ لتحميل الملف."
-                  : "💡 Pro tip: In the upcoming print wizard popup list, choose destination 'Save as PDF' to save your file digitally."}
               </div>
             </div>
 

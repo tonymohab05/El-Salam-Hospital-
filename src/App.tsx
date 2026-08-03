@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import * as XLSX from "xlsx";
 import {
   Search,
   Trash2,
@@ -1142,6 +1143,7 @@ export default function App() {
       stockThresholds,
     };
 
+    // 1. Save JSON database backup
     const blob = new Blob([JSON.stringify(backupData, null, 2)], {
       type: "application/json",
     });
@@ -1153,6 +1155,137 @@ export default function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    // 2. Save Multi-sheet Excel workbook (.xlsx)
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: سجلات وإيصالات المرضى
+      const sheet1Data = history.map((record, index) => {
+        const itemsText = record.invoice_lines
+          .map((l) => `${l.item_name_ar || l.item_name} (x${l.quantity})`)
+          .join(" | ");
+
+        const formattedDate = record.created_at
+          ? new Date(record.created_at).toLocaleString("ar-EG")
+          : "غير محدد";
+
+        return {
+          "م": index + 1,
+          "اسم المريض": record.patient_name || "بدون اسم",
+          "رقم الإيصال": record.receipt_number || "-",
+          "تاريخ ووقت الحفظ": formattedDate,
+          "المستلزمات المطلوبة بالفاتورة": itemsText,
+          "سعر الفاتورة / الإجمالي (ج.م)": record.grand_total,
+          "المسؤول المالي": record.billing_officer_email || "-",
+        };
+      });
+
+      const ws1 = XLSX.utils.json_to_sheet(sheet1Data);
+      XLSX.utils.book_append_sheet(wb, ws1, "سجلات وإيصالات المرضى");
+
+      // Sheet 2: دفتر الاستهلاك اليومي
+      const totalInvoices = history.length;
+      const totalDispatchedUnits = history.reduce(
+        (sum, r) => sum + r.invoice_lines.reduce((s, l) => s + l.quantity, 0),
+        0
+      );
+      const totalCost = history.reduce((sum, r) => sum + r.grand_total, 0);
+
+      const consumptionMap: Record<
+        string,
+        {
+          id: string;
+          name_ar: string;
+          category_ar: string;
+          unit_price: number;
+          total_qty: number;
+          total_amount: number;
+        }
+      > = {};
+
+      history.forEach((record) => {
+        record.invoice_lines.forEach((line) => {
+          if (!consumptionMap[line.item_id]) {
+            const inv = inventory.find((i) => i.id === line.item_id);
+            consumptionMap[line.item_id] = {
+              id: line.item_id,
+              name_ar: line.item_name_ar || line.item_name,
+              category_ar: inv ? inv.category_ar : "-",
+              unit_price: line.unit_price,
+              total_qty: 0,
+              total_amount: 0,
+            };
+          }
+          consumptionMap[line.item_id].total_qty += line.quantity;
+          consumptionMap[line.item_id].total_amount += line.line_total;
+        });
+      });
+
+      const sheet2Summary = [
+        {
+          "بيان الملخص اليومي": "عدد فواتير التحصيل المسجلة",
+          "القيمة / الإجمالي": totalInvoices,
+        },
+        {
+          "بيان الملخص اليومي": "إجمالي المستهلكات المنصرفة (وحدة)",
+          "القيمة / الإجمالي": totalDispatchedUnits,
+        },
+        {
+          "بيان الملخص اليومي": "إجمالي تكلفة المستلزمات (ج.م)",
+          "القيمة / الإجمالي": totalCost,
+        },
+      ];
+
+      const sheet2Details = Object.values(consumptionMap).map((item, idx) => ({
+        "م": idx + 1,
+        "كود الصنف (ID)": item.id,
+        "اسم الصنف المستهلك": item.name_ar,
+        "القسم / التصنيف": item.category_ar,
+        "سعر المفرد (ج.م)": item.unit_price,
+        "الكمية المستهلكة": item.total_qty,
+        "إجمالي القيمة المالية (ج.م)": item.total_amount,
+      }));
+
+      const ws2 = XLSX.utils.json_to_sheet(sheet2Summary);
+      XLSX.utils.sheet_add_json(
+        ws2,
+        [{}, { "بيان الملخص اليومي": "بيان تفصيلي بالمستلزمات المستهلكة:" }],
+        { origin: -1 }
+      );
+      XLSX.utils.sheet_add_json(ws2, sheet2Details, { origin: -1 });
+
+      XLSX.utils.book_append_sheet(wb, ws2, "دفتر الاستهلاك اليومي");
+
+      // Sheet 3: جرد وأسعار المخزون
+      const sheet3Data = inventory.map((item, index) => {
+        const threshold =
+          itemThresholds[item.id] !== undefined
+            ? itemThresholds[item.id]
+            : stockThresholds[item.id] !== undefined
+            ? stockThresholds[item.id]
+            : 10;
+
+        return {
+          "م": index + 1,
+          "ID الصنف": item.id,
+          "اسم الصنف (عربي)": item.name_ar,
+          "اسم الصنف (إنجليزي)": item.name_en,
+          "القسم / الفئة": item.category_ar,
+          "الرصيد المتاح بالمخزن": item.stock,
+          "سعر المفرد (ج.م)": item.unit_price,
+          "حد الأمان / إعادة الطلب": threshold,
+        };
+      });
+
+      const ws3 = XLSX.utils.json_to_sheet(sheet3Data);
+      XLSX.utils.book_append_sheet(wb, ws3, "جرد وأسعار المخزون");
+
+      // Save Excel file
+      XLSX.writeFile(wb, `نسخة_احتياطية_مستشفى_السلام_${today}.xlsx`);
+    } catch (err) {
+      console.error("Error exporting Excel backup:", err);
+    }
 
     // Persist today's backup date
     localStorage.setItem("el_salam_last_backup_date", today);
@@ -7107,9 +7240,9 @@ export default function App() {
 
               {/* Title of Document */}
               <div className="text-center my-6">
-                <span className="bg-slate-100 text-slate-900 px-6 py-2 rounded-lg font-black text-sm uppercase tracking-wider border border-slate-300 font-arabic">
+                <span className="bg-slate-100/90 text-slate-900 px-6 py-2 rounded-lg font-black text-sm uppercase tracking-wider border border-slate-300 font-arabic shadow-2xs">
                   {lang === "ar"
-                    ? "قسيمة إثبات صرف مستلزمات طبية للمريض"
+                    ? "كشف تجميعي بمستلزمات المريض"
                     : "Emergency Patient Supplies Voucher"}
                 </span>
               </div>
@@ -8135,84 +8268,86 @@ export default function App() {
                 className="bg-white rounded-xl shadow-2xl border border-slate-250 w-full max-w-lg overflow-hidden flex flex-col font-sans text-right"
               >
                 {/* Header */}
-                <div className="bg-sky-700 text-white p-4 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <ClipboardList className="w-5 h-5 font-bold" />
-                    <h3 className="text-sm font-black font-arabic">
-                      {lang === "ar" ? "تفاصيل الصلاحية وتوزيع المخزون بحسب الشحنات" : "Stock Expiry Breakdown"}
-                    </h3>
-                  </div>
+                <div className="bg-sky-700 text-white p-4 relative flex items-center justify-center">
                   <button
                     type="button"
                     onClick={() => setSelectedStockBreakdownItem(null)}
-                    className="text-white/80 hover:text-white p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-1 hover:bg-white/10 rounded transition-colors cursor-pointer z-10"
                   >
                     <X className="w-5 h-5" />
                   </button>
+                  <div className="flex items-center justify-center gap-2 text-center px-8">
+                    <ClipboardList className="w-5 h-5 font-bold shrink-0" />
+                    <h3 className="text-sm md:text-base font-black font-arabic tracking-tight">
+                      {lang === "ar" ? "تفاصيل الصلاحية وتوزيع المخزون بحسب الشحنات" : "Stock Expiry Breakdown"}
+                    </h3>
+                  </div>
                 </div>
 
                 {/* Content */}
                 <div className="p-5 overflow-y-auto max-h-[70vh] space-y-4 font-arabic">
                   {/* Product Details Header */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs space-y-1.5 shadow-3xs">
-                    <div className="flex justify-between font-arabic">
-                      <span className="text-slate-400 font-bold">
-                        {lang === "ar" ? "اسم الصنف:" : "Item Name:"}
-                      </span>
-                      <span className="font-extrabold text-slate-900">
+                  <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-4 text-xs space-y-2.5 shadow-2xs">
+                    <div className="grid grid-cols-12 items-center gap-2 font-arabic">
+                      <div className="col-span-8 text-center font-black text-slate-900 text-sm">
                         {lang === "ar" ? item.name_ar : item.name_en}
-                      </span>
+                      </div>
+                      <div className="col-span-4 text-right text-slate-400 font-bold">
+                        {lang === "ar" ? ": اسم الصنف" : ": Item Name"}
+                      </div>
                     </div>
-                    <div className="flex justify-between font-mono">
-                      <span className="text-slate-400 font-bold font-arabic">
-                        {lang === "ar" ? "كود الصنف:" : "Item ID:"}
-                      </span>
-                      <span className="text-slate-700 font-bold">
+
+                    <div className="grid grid-cols-12 items-center gap-2 font-mono">
+                      <div className="col-span-8 text-center font-bold text-slate-700">
                         {item.id}
-                      </span>
+                      </div>
+                      <div className="col-span-4 text-right text-slate-400 font-bold font-arabic">
+                        {lang === "ar" ? ": كود الصنف" : ": Item ID"}
+                      </div>
                     </div>
-                    <div className="flex justify-between font-arabic">
-                      <span className="text-slate-400 font-bold">
-                        {lang === "ar" ? "التصنيف الرئيسي:" : "Category:"}
-                      </span>
-                      <span className="text-slate-705 font-bold">
+
+                    <div className="grid grid-cols-12 items-center gap-2 font-arabic">
+                      <div className="col-span-8 text-center font-bold text-slate-800">
                         {lang === "ar" ? item.category_ar : item.category_en}
-                      </span>
+                      </div>
+                      <div className="col-span-4 text-right text-slate-400 font-bold">
+                        {lang === "ar" ? ": التصنيف الرئيسي" : ": Category"}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Summary Bar */}
-                  <div className="grid grid-cols-4 gap-2 text-center select-none shadow-3xs">
-                    <div className="bg-slate-100 rounded-lg p-2 border border-slate-200">
-                      <span className="text-[9px] text-slate-500 font-extrabold block">
-                        {lang === "ar" ? "الرصيد الكلي" : "Total Stock"}
+                  {/* Summary Bar - Order matched to screenshot (Expired -> Near Expiry -> Valid -> Total Stock) */}
+                  <div className="grid grid-cols-4 gap-2.5 text-center select-none shadow-3xs font-arabic">
+                    <div className="bg-rose-50/80 rounded-xl p-2.5 border border-rose-100">
+                      <span className="text-[10px] text-rose-600 font-extrabold block">
+                        {lang === "ar" ? "منتهي" : "Expired"}
                       </span>
-                      <span className="text-sm font-black text-slate-800 font-mono block mt-0.5">
-                        {totalStock}
-                      </span>
-                    </div>
-                    <div className="bg-emerald-50 rounded-lg p-2 border border-emerald-100">
-                      <span className="text-[9px] text-emerald-600 font-extrabold block">
-                        {lang === "ar" ? "صالح وآمن" : "Active / Valid"}
-                      </span>
-                      <span className="text-sm font-black text-emerald-750 font-mono block mt-0.5">
-                        {validQty + noneQty}
+                      <span className="text-base font-black text-rose-600 font-mono block mt-0.5">
+                        {expiredQty}
                       </span>
                     </div>
-                    <div className="bg-amber-50 rounded-lg p-2 border border-amber-100">
-                      <span className="text-[9px] text-amber-600 font-extrabold block animate-pulse">
+                    <div className="bg-amber-50/80 rounded-xl p-2.5 border border-amber-100">
+                      <span className="text-[10px] text-amber-600 font-extrabold block">
                         {lang === "ar" ? "ينتهي قريباً" : "Near Expiry"}
                       </span>
-                      <span className="text-sm font-black text-amber-700 font-mono block mt-0.5">
+                      <span className="text-base font-black text-amber-700 font-mono block mt-0.5">
                         {approachingQty}
                       </span>
                     </div>
-                    <div className="bg-rose-50 rounded-lg p-2 border border-rose-100">
-                      <span className="text-[9px] text-rose-500 font-extrabold block">
-                        {lang === "ar" ? "منتهي" : "Expired"}
+                    <div className="bg-emerald-50/80 rounded-xl p-2.5 border border-emerald-100">
+                      <span className="text-[10px] text-emerald-600 font-extrabold block">
+                        {lang === "ar" ? "صالح وآمن" : "Valid & Safe"}
                       </span>
-                      <span className="text-sm font-black text-rose-700 font-mono block mt-0.5">
-                        {expiredQty}
+                      <span className="text-base font-black text-emerald-700 font-mono block mt-0.5">
+                        {validQty + noneQty}
+                      </span>
+                    </div>
+                    <div className="bg-slate-100/80 rounded-xl p-2.5 border border-slate-200">
+                      <span className="text-[10px] text-slate-500 font-extrabold block">
+                        {lang === "ar" ? "الرصيد الكلي" : "Total Stock"}
+                      </span>
+                      <span className="text-base font-black text-slate-800 font-mono block mt-0.5">
+                        {totalStock}
                       </span>
                     </div>
                   </div>
