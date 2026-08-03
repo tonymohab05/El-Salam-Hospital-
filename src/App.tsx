@@ -6396,9 +6396,6 @@ export default function App() {
                       <h3 className="text-sm font-black text-sky-950 font-arabic">
                         لوحة التحكم وإدارة بيانات المخزوّن الكلي والأسعار
                       </h3>
-                      <p className="text-[10.5px] text-sky-800 font-arabic mt-0.5">
-                        تحرير أسماء وأكواد الأدوية والمستلزمات الطبية، تعديل كميات الأرصدة، تسعير الوحدات، وضبط مستويات حد الأمان المنذر لكل صنف
-                      </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2" dir="ltr">
