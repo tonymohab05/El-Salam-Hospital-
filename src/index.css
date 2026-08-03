@@ -17,10 +17,10 @@ body {
 
 @media print {
   @page {
-    size: auto;
-    margin: 8mm 6mm !important;
+    size: A4 portrait;
+    margin: 10mm 10mm !important;
   }
-  body {
+  html, body {
     background-color: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
@@ -28,86 +28,95 @@ body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  /* Hide every UI element except the direct printable elements */
-  body > div:first-child * {
+  
+  /* Hide all elements by default during print */
+  body * {
     visibility: hidden !important;
   }
-  /* Whitelist the receipt container */
-  #printable-receipt-card, #printable-receipt-card * {
+
+  /* Make target printable elements and their children visible */
+  #printable-receipt-card,
+  #printable-receipt-card *,
+  #printable-consumption-report,
+  #printable-consumption-report *,
+  #printable-batch-receipts,
+  #printable-batch-receipts *,
+  #printable-restock-invoice,
+  #printable-restock-invoice * {
     visibility: visible !important;
   }
-  /* Whitelist the daily consumption report container */
-  #printable-consumption-report, #printable-consumption-report * {
+
+  /* Ensure parents of printable targets do not clip or hide them */
+  div:has(#printable-receipt-card),
+  div:has(#printable-consumption-report),
+  div:has(#printable-batch-receipts),
+  div:has(#printable-restock-invoice) {
     visibility: visible !important;
-  }
-  /* Whitelist the batch receipts container */
-  #printable-batch-receipts, #printable-batch-receipts * {
-    visibility: visible !important;
-  }
-  /* Whitelist the restock invoice details container */
-  #printable-restock-invoice, #printable-restock-invoice * {
-    visibility: visible !important;
-  }
-  
-  #printable-restock-invoice {
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
     width: 100% !important;
-    max-width: 100% !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: white !important;
-    margin: 0 auto !important;
-    padding: 0 !important;
+    position: static !important;
   }
 
   #printable-receipt-card {
     position: absolute !important;
     left: 0 !important;
-    right: 0 !important;
     top: 0 !important;
     width: 100% !important;
-    max-width: 148mm !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background: white !important;
+    display: block !important;
+  }
+
+  #printable-consumption-report {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
     padding: 0 !important;
-    visibility: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
     display: block !important;
   }
 
   #printable-batch-receipts {
     position: absolute !important;
     left: 0 !important;
-    right: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 148mm !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: white !important;
-    margin: 0 auto !important;
-    padding: 0 !important;
-  }
-
-  #printable-consumption-report {
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
     top: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background: white !important;
+    display: block !important;
+  }
+
+  #printable-restock-invoice {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
     padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    display: block !important;
   }
-  /* Ensure print buttons and action indicators in receipt are hidden too */
-  .no-print, .no-print * {
+
+  /* Explicit no-print elements */
+  .no-print,
+  .no-print * {
     display: none !important;
     visibility: hidden !important;
   }

@@ -7204,10 +7204,10 @@ export default function App() {
           )}
 
           {/* Invisible Print Container for physical printers */}
-          <div className="absolute top-0 left-0 w-0 h-0 overflow-hidden opacity-0 pointer-events-none print:block print:w-auto print:h-auto print:opacity-100 print:relative">
+          <div className="absolute top-0 left-0 w-0 h-0 overflow-hidden opacity-0 pointer-events-none print:static print:w-full print:h-auto print:opacity-100 print:overflow-visible print:pointer-events-auto">
             <div
               id="printable-receipt-card"
-              className={`bg-white p-6 text-slate-900 w-full max-w-[148mm] mx-auto print:border-none print:shadow-none border border-slate-300 rounded-xl shadow-md font-sans ${
+              className={`bg-white p-6 text-slate-900 w-full max-w-[148mm] mx-auto print:max-w-full print:p-0 print:border-none print:shadow-none border border-slate-300 rounded-xl shadow-md font-sans ${
                 printMode === "batch" ? "print:hidden" : ""
               }`}
             >
