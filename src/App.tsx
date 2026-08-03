@@ -7207,13 +7207,13 @@ export default function App() {
           <div className="absolute top-0 left-0 w-0 h-0 overflow-hidden opacity-0 pointer-events-none print:static print:w-full print:h-auto print:opacity-100 print:overflow-visible print:pointer-events-auto">
             <div
               id="printable-receipt-card"
-              className={`bg-white p-6 text-slate-900 w-full max-w-[148mm] mx-auto print:max-w-full print:p-0 print:border-none print:shadow-none border border-slate-300 rounded-xl shadow-md font-sans ${
+              className={`bg-white p-6 md:p-8 text-slate-900 w-full max-w-[210mm] mx-auto border border-slate-300 rounded-2xl shadow-none font-sans ${
                 printMode === "batch" ? "print:hidden" : ""
               }`}
             >
               {/* Formal Letterhead Header */}
               <div
-                className="grid grid-cols-3 items-center border-b-2 border-slate-800 pb-4 mb-4"
+                className="grid grid-cols-3 items-center border-b-2 border-slate-900 pb-4 mb-5"
                 dir="ltr"
               >
                 {/* Left visually: English details */}
@@ -7221,14 +7221,14 @@ export default function App() {
                   <h2 className="text-xs md:text-sm font-black text-slate-900 tracking-tight leading-tight">
                     EL-SALAM HOSPITAL
                   </h2>
-                  <p className="text-[9px] font-bold text-slate-505 mt-0.5">
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-600 mt-0.5">
                     76 Ahmed Esmat , Ain Shams
                   </p>
                 </div>
 
                 {/* Center visually: Hospital Logo */}
                 <div className="flex justify-center">
-                  <HospitalLogo className="w-10 h-10 md:w-12 md:h-12 shrink-0 aspect-square" />
+                  <HospitalLogo className="w-12 h-12 md:w-14 md:h-14 shrink-0 aspect-square" />
                 </div>
 
                 {/* Right visually: Arabic details */}
@@ -7236,15 +7236,15 @@ export default function App() {
                   <h2 className="text-xs md:text-sm font-black text-slate-900 font-arabic leading-tight">
                     مستشفى السلام
                   </h2>
-                  <p className="text-[9px] font-bold text-slate-505 mt-0.5">
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-600 mt-0.5 font-arabic">
                     ٧٦ احمد عصمت عين شمس
                   </p>
                 </div>
               </div>
 
               {/* Title of Document */}
-              <div className="text-center my-6">
-                <span className="bg-slate-100/90 text-slate-900 px-6 py-2 rounded-lg font-black text-sm uppercase tracking-wider border border-slate-300 font-arabic shadow-2xs">
+              <div className="text-center my-5">
+                <span className="bg-slate-100/90 text-slate-900 px-8 py-2 rounded-xl font-black text-sm uppercase tracking-wider border border-slate-300 font-arabic shadow-2xs inline-block">
                   {lang === "ar"
                     ? "كشف تجميعي بمستلزمات المريض"
                     : "Emergency Patient Supplies Voucher"}
@@ -7252,26 +7252,28 @@ export default function App() {
               </div>
 
               {/* Patient Metadata Grid */}
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs mb-6">
+              <div className="grid grid-cols-2 gap-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 text-xs mb-5 font-arabic">
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
-                      {lang === "ar" ? "اسم المريض:" : "Patient Name:"}
+                  <div className="flex gap-2 items-center">
+                    <span className="text-slate-400 font-bold font-arabic whitespace-nowrap">
+                      {lang === "ar"
+                        ? "اسم الحضور / المريض:"
+                        : "Patient Name:"}
                     </span>
-                    <span className="font-bold text-slate-800 font-arabic">
+                    <span className="font-bold text-slate-800 font-arabic text-sm">
                       {(tempPrintRecord
                         ? tempPrintRecord.patient_name
                         : patientName) ||
                         (lang === "ar" ? "[لم يحدد]" : "[No Name]")}
                     </span>
                   </div>
-                  <div className="flex gap-2">
-                    <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
+                  <div className="flex gap-2 items-center">
+                    <span className="text-slate-400 font-bold font-arabic whitespace-nowrap">
                       {lang === "ar"
                         ? "رقم المرجع للفاتورة:"
                         : "Voucher Ref No:"}
                     </span>
-                    <span className="font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">
+                    <span className="font-bold text-slate-900 font-mono bg-white px-2.5 py-0.5 rounded-md border border-slate-200 shadow-2xs">
                       {tempPrintRecord
                         ? tempPrintRecord.receipt_number
                         : receiptNumber}
@@ -7280,8 +7282,8 @@ export default function App() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
+                  <div className="flex gap-2 items-center">
+                    <span className="text-slate-400 font-bold font-arabic whitespace-nowrap">
                       {lang === "ar"
                         ? "تاريخ ووقت المعاملة:"
                         : "Intake Timestamp:"}
@@ -7305,16 +7307,17 @@ export default function App() {
                       })}
                     </span>
                   </div>
-                  <div className="flex gap-2">
-                    <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
-                      {lang === "ar" ? "المسؤول المالي:" : "Billing Officer:"}
+                  <div className="flex gap-2 items-center">
+                    <span className="text-slate-400 font-bold font-arabic whitespace-nowrap">
+                      {lang === "ar" ? "منفذ الصرف المالي:" : "Billing Officer:"}
                     </span>
-                    <span className="font-semibold text-slate-705 bg-white px-2 py-0.5 rounded border border-slate-200 font-arabic">
+                    <span className="font-bold text-slate-800 bg-white px-2.5 py-0.5 rounded-md border border-slate-200 font-arabic shadow-2xs">
                       {getUserName(
                         tempPrintRecord
                           ? tempPrintRecord.billing_officer_email
                           : currentUser?.email || "Antonymohab@gmail.com",
                         lang,
+                        operators,
                       )}
                     </span>
                   </div>
@@ -7322,50 +7325,52 @@ export default function App() {
               </div>
 
               {/* Formal Table of Items */}
-              <div className="overflow-x-auto mb-6">
-                <table className="w-full text-right border-collapse text-xs border border-slate-300">
+              <div className="overflow-x-auto mb-5 rounded-lg border border-slate-300">
+                <table className="w-full text-right border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
-                      <th className="py-2.5 px-3 text-right font-arabic border-r border-slate-300 w-10">
+                    <tr className="bg-slate-100/90 text-slate-800 font-bold border-b border-slate-300 font-arabic">
+                      <th className="py-2.5 px-3 text-right border-r border-slate-300 w-10">
                         #
                       </th>
-                      <th className="py-2.5 px-3 text-right font-arabic border-r border-slate-300">
+                      <th className="py-2.5 px-3 text-right border-r border-slate-300">
                         {lang === "ar"
-                          ? "المستلزم الطبي"
+                          ? "المستلزم الطبي المستهلك"
                           : "Medical Item / Supply"}
                       </th>
-                      <th className="py-2.5 px-3 text-center font-arabic border-r border-slate-300">
-                        {lang === "ar" ? "سعر المفرد" : "Unit Price"}
+                      <th className="py-2.5 px-3 text-center border-r border-slate-300">
+                        {lang === "ar" ? "سعر الوحدة" : "Unit Price"}
                       </th>
-                      <th className="py-2.5 px-3 text-center font-arabic border-r border-slate-300 w-16">
+                      <th className="py-2.5 px-3 text-center border-r border-slate-300 w-16">
                         {lang === "ar" ? "الكمية" : "Qty"}
                       </th>
-                      <th className="py-2.5 px-3 text-left font-arabic">
-                        {lang === "ar" ? "الإجمالي" : "Total Price"}
+                      <th className="py-2.5 px-3 text-left">
+                        {lang === "ar"
+                          ? "القيمة الإجمالية"
+                          : "Total Price"}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-250">
+                  <tbody className="divide-y divide-slate-200">
                     {(tempPrintRecord
                       ? tempPrintRecord.invoice_lines
                       : invoiceLines
                     ).map((line, index) => (
-                      <tr key={line.item_id} className="text-slate-800">
-                        <td className="py-2 px-3 text-right border-r border-slate-250 font-mono">
+                      <tr key={line.item_id || index} className="text-slate-800">
+                        <td className="py-2.5 px-3 text-right border-r border-slate-200 font-mono">
                           {index + 1}
                         </td>
-                        <td className="py-2 px-3 text-right border-r border-slate-250 font-arabic font-bold">
+                        <td className="py-2.5 px-3 text-right border-r border-slate-200 font-arabic font-bold text-slate-800">
                           {lang === "ar"
                             ? line.item_name_ar
                             : line.item_name_en}
                         </td>
-                        <td className="py-2 px-3 text-center border-r border-slate-250 font-mono font-bold text-slate-700">
+                        <td className="py-2.5 px-3 text-center border-r border-slate-200 font-mono font-bold text-slate-700">
                           {formatCurrency(line.unit_price, lang)}
                         </td>
-                        <td className="py-2 px-3 text-center border-r border-slate-250 font-bold font-mono">
+                        <td className="py-2.5 px-3 text-center border-r border-slate-200 font-bold font-mono">
                           {formatArabicDigits(line.quantity, lang)}
                         </td>
-                        <td className="py-2 px-3 text-left font-bold font-mono select-all text-slate-900">
+                        <td className="py-2.5 px-3 text-left font-bold font-mono text-slate-900">
                           {formatCurrency(line.line_total, lang)}
                         </td>
                       </tr>
@@ -7374,13 +7379,13 @@ export default function App() {
                     <tr className="bg-slate-50/90 font-black border-t-2 border-slate-400">
                       <td
                         colSpan={3}
-                        className="py-3 px-3 text-right border-r border-slate-300 font-arabic text-xs"
+                        className="py-3 px-3 text-right border-r border-slate-300 font-arabic text-xs font-bold text-slate-900"
                       >
                         {lang === "ar"
-                          ? "القيمة الكلية للاستحقاق:"
+                          ? "إجمالي كلفة المستلزمات (الصافي):"
                           : "Grand Voucher Total Cost:"}
                       </td>
-                      <td className="py-3 px-3 text-center border-r border-slate-300 font-mono text-xs">
+                      <td className="py-3 px-3 text-center border-r border-slate-300 font-mono text-xs font-bold">
                         {formatArabicDigits(
                           (tempPrintRecord
                             ? tempPrintRecord.invoice_lines
@@ -7389,7 +7394,7 @@ export default function App() {
                           lang,
                         )}
                       </td>
-                      <td className="py-3 px-3 text-left font-mono text-emerald-700 text-xs">
+                      <td className="py-3 px-3 text-left font-mono text-slate-900 text-xs font-bold">
                         {formatCurrency(
                           tempPrintRecord
                             ? tempPrintRecord.grand_total
@@ -7403,12 +7408,12 @@ export default function App() {
               </div>
 
               {/* Currency Written Word & Department confirmation */}
-              <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 border border-slate-200 rounded-xl p-4 bg-slate-50/55 mb-6 text-xs">
+              <div className="border border-slate-200/90 rounded-2xl p-4 bg-slate-50/70 mb-4 text-xs font-arabic">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-450 block font-arabic">
+                  <span className="text-[10.5px] uppercase font-bold text-slate-400 block font-arabic mb-1">
                     {lang === "ar" ? "فقط وقدره:" : "Written Amount:"}
                   </span>
-                  <span className="font-bold text-slate-800 font-arabic italic">
+                  <span className="font-bold text-slate-800 font-arabic italic text-xs">
                     "
                     {translateNumberToCurrencyWords(
                       tempPrintRecord
@@ -7419,21 +7424,13 @@ export default function App() {
                     "
                   </span>
                 </div>
-                <div className="text-right border-t sm:border-t-0 sm:border-r border-slate-200 pt-2 sm:pt-0 sm:pr-4">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block font-arabic">
-                    {""}
-                  </span>
-                  <span className="font-black text-emerald-600 font-arabic flex items-center justify-end gap-1">
-                    {""}
-                  </span>
-                </div>
               </div>
             </div>
 
             {printMode === "batch" && (
               <div
                 id="printable-batch-receipts"
-                className="w-full max-w-[148mm] mx-auto space-y-12 bg-white text-slate-900 print:text-black"
+                className="w-full max-w-[210mm] mx-auto space-y-12 bg-white text-slate-900 print:text-black"
               >
                 {batchInvoices.map((invoice, bIdx) => {
                   const invoiceTotals = invoice.invoice_lines.reduce(
@@ -7447,12 +7444,12 @@ export default function App() {
                   return (
                     <div
                       key={invoice.receipt_number + "-" + bIdx}
-                      className="bg-white p-6 text-slate-900 w-full border border-slate-300 rounded-xl shadow-none font-sans print:border-slate-300 print:p-6 print:mb-16 print:shadow-none break-after-page page-break-after"
+                      className="bg-white p-6 md:p-8 text-slate-900 w-full border border-slate-300 rounded-2xl shadow-none font-sans print:border-slate-300 print:p-8 print:mb-16 print:shadow-none break-after-page page-break-after"
                       style={{ pageBreakAfter: "always", breakAfter: "page" }}
                     >
                       {/* Formal Letterhead Header */}
                       <div
-                        className="grid grid-cols-3 items-center border-b-2 border-slate-800 pb-4 mb-4"
+                        className="grid grid-cols-3 items-center border-b-2 border-slate-900 pb-4 mb-5"
                         dir="ltr"
                       >
                         {/* Left visually: English details */}
@@ -7460,14 +7457,14 @@ export default function App() {
                           <h2 className="text-xs md:text-sm font-black text-slate-900 tracking-tight leading-tight">
                             EL-SALAM HOSPITAL
                           </h2>
-                          <p className="text-[9px] font-bold text-slate-505 mt-0.5">
+                          <p className="text-[9px] md:text-[10px] font-bold text-slate-600 mt-0.5">
                             76 Ahmed Esmat , Ain Shams
                           </p>
                         </div>
 
                         {/* Center visually: Hospital Logo */}
                         <div className="flex justify-center">
-                          <HospitalLogo className="w-10 h-10 md:w-12 md:h-12 shrink-0 aspect-square" />
+                          <HospitalLogo className="w-12 h-12 md:w-14 md:h-14 shrink-0 aspect-square" />
                         </div>
 
                         {/* Right visually: Arabic details */}
@@ -7475,15 +7472,15 @@ export default function App() {
                           <h2 className="text-xs md:text-sm font-black text-slate-900 font-arabic leading-tight">
                             مستشفى السلام
                           </h2>
-                          <p className="text-[9px] font-bold text-slate-505 mt-0.5">
+                          <p className="text-[9px] md:text-[10px] font-bold text-slate-600 mt-0.5 font-arabic">
                             ٧٦ احمد عصمت عين شمس
                           </p>
                         </div>
                       </div>
 
                       {/* Title of Document */}
-                      <div className="text-center my-6 animate-fadeIn">
-                        <span className="bg-slate-100 text-slate-900 px-6 py-2 rounded-lg font-black text-sm uppercase tracking-wider border border-slate-300 font-arabic">
+                      <div className="text-center my-5">
+                        <span className="bg-slate-100/90 text-slate-900 px-8 py-2 rounded-xl font-black text-sm uppercase tracking-wider border border-slate-300 font-arabic shadow-2xs inline-block">
                           {lang === "ar"
                             ? "كشف تجميعي بمستلزمات المريض"
                             : "Emergency Patient Supplies Voucher"}
@@ -7491,33 +7488,38 @@ export default function App() {
                       </div>
 
                       {/* Patient Metadata Grid */}
-                      <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs mb-6">
-                        <div className="space-y-2 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <span className="font-bold text-slate-800 font-arabic">
-                              {invoice.patient_name ||
-                                (lang === "ar" ? "[لم يحدد]" : "[No Name]")}
-                            </span>
-                            <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
+                      <div className="grid grid-cols-2 gap-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/90 text-xs mb-5 font-arabic">
+                        <div className="space-y-2">
+                          <div className="flex gap-2 items-center">
+                            <span className="text-slate-400 font-bold font-arabic whitespace-nowrap">
                               {lang === "ar"
                                 ? "اسم الحضور / المريض:"
                                 : "Patient Name:"}
                             </span>
-                          </div>
-                          <div className="flex gap-2 justify-end">
-                            <span className="font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">
-                              {invoice.receipt_number}
+                            <span className="font-bold text-slate-800 font-arabic text-sm">
+                              {invoice.patient_name ||
+                                (lang === "ar" ? "[لم يحدد]" : "[No Name]")}
                             </span>
-                            <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <span className="text-slate-400 font-bold font-arabic whitespace-nowrap">
                               {lang === "ar"
                                 ? "رقم المرجع للفاتورة:"
                                 : "Voucher Ref No:"}
                             </span>
+                            <span className="font-bold text-slate-900 font-mono bg-white px-2.5 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                              {invoice.receipt_number}
+                            </span>
                           </div>
                         </div>
 
-                        <div className="space-y-2 text-right">
-                          <div className="flex gap-2 justify-end">
+                        <div className="space-y-2">
+                          <div className="flex gap-2 items-center">
+                            <span className="text-slate-400 font-bold font-arabic whitespace-nowrap">
+                              {lang === "ar"
+                                ? "تاريخ ووقت المعاملة:"
+                                : "Intake Timestamp:"}
+                            </span>
                             <span className="font-bold text-slate-700">
                               {new Date(invoice.created_at).toLocaleDateString(
                                 lang === "ar" ? "ar-EG" : "en-US",
@@ -7528,72 +7530,67 @@ export default function App() {
                                 { hour: "2-digit", minute: "2-digit" },
                               )}
                             </span>
-                            <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
-                              {lang === "ar"
-                                ? "تاريخ ووقت المعاملة:"
-                                : "Intake Timestamp:"}
-                            </span>
                           </div>
-                          <div className="flex gap-2 justify-end">
-                            <span className="font-semibold text-slate-705 bg-white px-2 py-0.5 rounded border border-slate-200 font-arabic">
-                              {getUserName(invoice.billing_officer_email, lang)}
-                            </span>
-                            <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
+                          <div className="flex gap-2 items-center">
+                            <span className="text-slate-400 font-bold font-arabic whitespace-nowrap">
                               {lang === "ar"
                                 ? "منفذ الصرف المالي:"
                                 : "Billing Officer:"}
+                            </span>
+                            <span className="font-bold text-slate-800 bg-white px-2.5 py-0.5 rounded-md border border-slate-200 font-arabic shadow-2xs">
+                              {getUserName(invoice.billing_officer_email, lang, operators)}
                             </span>
                           </div>
                         </div>
                       </div>
 
                       {/* Formal Table of Items */}
-                      <div className="overflow-x-auto mb-6">
-                        <table className="w-full text-right border-collapse text-xs border border-slate-300">
+                      <div className="overflow-x-auto mb-5 rounded-lg border border-slate-300">
+                        <table className="w-full text-right border-collapse text-xs">
                           <thead>
-                            <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
-                              <th className="py-2.5 px-3 text-right font-arabic border-r border-slate-300 w-10">
+                            <tr className="bg-slate-100/90 text-slate-800 font-bold border-b border-slate-300 font-arabic">
+                              <th className="py-2.5 px-3 text-right border-r border-slate-300 w-10">
                                 #
                               </th>
-                              <th className="py-2.5 px-3 text-right font-arabic border-r border-slate-300">
+                              <th className="py-2.5 px-3 text-right border-r border-slate-300">
                                 {lang === "ar"
                                   ? "المستلزم الطبي المستهلك"
                                   : "Medical Item / Supply"}
                               </th>
-                              <th className="py-2.5 px-3 text-center font-arabic border-r border-slate-300">
+                              <th className="py-2.5 px-3 text-center border-r border-slate-300">
                                 {lang === "ar" ? "سعر الوحدة" : "Unit Price"}
                               </th>
-                              <th className="py-2.5 px-3 text-center font-arabic border-r border-slate-300 w-16">
+                              <th className="py-2.5 px-3 text-center border-r border-slate-300 w-16">
                                 {lang === "ar" ? "الكمية" : "Qty"}
                               </th>
-                              <th className="py-2.5 px-3 text-left font-arabic">
+                              <th className="py-2.5 px-3 text-left">
                                 {lang === "ar"
                                   ? "القيمة الإجمالية"
                                   : "Total Price"}
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-250">
+                          <tbody className="divide-y divide-slate-200">
                             {invoice.invoice_lines.map((line, index) => (
                               <tr
                                 key={line.item_id + "-" + index}
                                 className="text-slate-800"
                               >
-                                <td className="py-2 px-3 text-center border-r border-slate-250 font-mono">
+                                <td className="py-2.5 px-3 text-right border-r border-slate-200 font-mono">
                                   {index + 1}
                                 </td>
-                                <td className="py-2 px-3 text-right border-r border-slate-250 font-arabic font-bold text-slate-800 font-arabic">
+                                <td className="py-2.5 px-3 text-right border-r border-slate-200 font-arabic font-bold text-slate-800">
                                   {lang === "ar"
                                     ? line.item_name_ar
                                     : line.item_name_en}
                                 </td>
-                                <td className="py-2 px-3 text-center border-r border-slate-250 font-mono font-bold text-slate-700">
+                                <td className="py-2.5 px-3 text-center border-r border-slate-200 font-mono font-bold text-slate-700">
                                   {formatCurrency(line.unit_price, lang)}
                                 </td>
-                                <td className="py-2 px-3 text-center border-r border-slate-250 font-bold font-mono">
+                                <td className="py-2.5 px-3 text-center border-r border-slate-200 font-bold font-mono">
                                   {formatArabicDigits(line.quantity, lang)}
                                 </td>
-                                <td className="py-2 px-3 text-left font-bold font-mono select-all text-slate-900">
+                                <td className="py-2.5 px-3 text-left font-bold font-mono text-slate-900">
                                   {formatCurrency(line.line_total, lang)}
                                 </td>
                               </tr>
@@ -7602,16 +7599,16 @@ export default function App() {
                             <tr className="bg-slate-50/90 font-black border-t-2 border-slate-400">
                               <td
                                 colSpan={3}
-                                className="py-3 px-3 text-right border-r border-slate-300 font-arabic text-xs font-bold font-arabic"
+                                className="py-3 px-3 text-right border-r border-slate-300 font-arabic text-xs font-bold text-slate-900"
                               >
                                 {lang === "ar"
                                   ? "إجمالي كلفة المستلزمات (الصافي):"
                                   : "Grand Voucher Total Cost:"}
                               </td>
-                              <td className="py-3 px-3 text-center border-r border-slate-300 font-mono text-xs font-bold leading-none">
+                              <td className="py-3 px-3 text-center border-r border-slate-300 font-mono text-xs font-bold">
                                 {formatArabicDigits(qValTotal, lang)}
                               </td>
-                              <td className="py-3 px-3 text-left font-mono text-emerald-705 text-xs text-emerald-700 font-bold font-mono">
+                              <td className="py-3 px-3 text-left font-mono text-slate-900 text-xs font-bold">
                                 {formatCurrency(invoiceTotals, lang)}
                               </td>
                             </tr>
@@ -7619,13 +7616,13 @@ export default function App() {
                         </table>
                       </div>
 
-                      {/* Currency Written Word & Department confirmation */}
-                      <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 border border-slate-200 rounded-xl p-4 bg-slate-50/50 mb-6 text-xs text-right">
-                        <div className="w-full text-right">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block font-arabic">
+                      {/* Currency Written Word */}
+                      <div className="border border-slate-200/90 rounded-2xl p-4 bg-slate-50/70 mb-4 text-xs font-arabic">
+                        <div>
+                          <span className="text-[10.5px] uppercase font-bold text-slate-400 block font-arabic mb-1">
                             {lang === "ar" ? "فقط وقدره:" : "Written Amount:"}
                           </span>
-                          <span className="font-bold text-slate-800 font-arabic italic">
+                          <span className="font-bold text-slate-800 font-arabic italic text-xs">
                             "
                             {translateNumberToCurrencyWords(
                               invoiceTotals,

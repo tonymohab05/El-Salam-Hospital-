@@ -65,11 +65,14 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 0 !important;
-    border: none !important;
+    padding: 1.5rem !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 1rem !important;
+    background: #ffffff !important;
     box-shadow: none !important;
-    background: white !important;
     display: block !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   #printable-consumption-report {
@@ -79,10 +82,11 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 0 !important;
-    border: none !important;
+    padding: 1.5rem !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 1rem !important;
+    background: #ffffff !important;
     box-shadow: none !important;
-    background: white !important;
     display: block !important;
   }
 
@@ -96,7 +100,7 @@ body {
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background: white !important;
+    background: #ffffff !important;
     display: block !important;
   }
 
@@ -107,10 +111,11 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 0 !important;
-    border: none !important;
+    padding: 1.5rem !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 1rem !important;
+    background: #ffffff !important;
     box-shadow: none !important;
-    background: white !important;
     display: block !important;
   }
 
