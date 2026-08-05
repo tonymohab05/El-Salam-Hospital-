@@ -1277,7 +1277,7 @@ export default function App() {
           "تاريخ ووقت الحفظ": formattedDate,
           "المستلزمات المطلوبة بالفاتورة": itemsText,
           "سعر الفاتورة / الإجمالي (ج.م)": record.grand_total,
-          "المسؤول المالي": record.billing_officer_email || "-",
+          "المسؤول المالي (اسم الحساب)": getUserName(record.billing_officer_email, lang) || record.billing_officer_email || "-",
         };
       });
 
@@ -3181,338 +3181,7 @@ export default function App() {
           </div>
 
           {/* Login Error Notification */}
-          {/* In-Place Invoice Editor Modal (تعديل الفاتورة في نفس الصفحة) */}
-        {editingInvoiceIndex !== null && history[editingInvoiceIndex] && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 md:p-6 overflow-y-auto animate-fadeIn">
-            <div
-              className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden font-arabic text-right my-auto"
-              dir="rtl"
-            >
-              {/* Modal Header */}
-              <div className="bg-gradient-to-r from-hospital-blue to-sky-700 text-white p-4 md:p-5 flex items-center justify-between shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/10 rounded-xl">
-                    <Pencil className="w-5 h-5 text-sky-100" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm md:text-base font-black">
-                      {lang === "ar" ? "تعديل الفاتورة في الأرشيف" : "Edit Invoice Record"}
-                    </h3>
-                    <p className="text-[11px] text-sky-100 font-mono mt-0.5">
-                      {lang === "ar"
-                        ? `رقم الإيصال: #${history[editingInvoiceIndex].receipt_number}`
-                        : `Receipt Ref: #${history[editingInvoiceIndex].receipt_number}`}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditingInvoiceIndex(null)}
-                  className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-xl transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-4 md:p-6 space-y-5 max-h-[75vh] overflow-y-auto">
-                {/* Patient Name & Ref Details */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      {lang === "ar" ? "اسم المريض / الحضور:" : "Patient Name:"}
-                    </label>
-                    <input
-                      type="text"
-                      value={editingInvoicePatientName}
-                      onChange={(e) => setEditingInvoicePatientName(e.target.value)}
-                      className="w-full bg-white border border-slate-300 focus:border-hospital-blue focus:ring-1 focus:ring-hospital-blue rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800"
-                      placeholder={lang === "ar" ? "أدخل اسم المريض..." : "Enter patient name..."}
-                    />
-                  </div>
-                  <div className="flex flex-col md:items-end text-xs space-y-1 text-slate-500 font-mono">
-                    <div>
-                      <span className="font-arabic font-bold text-slate-700 ml-1">تاريخ الإنشاء:</span>
-                      {new Date(history[editingInvoiceIndex].created_at).toLocaleDateString(
-                        lang === "ar" ? "ar-EG" : "en-US"
-                      )}{" "}
-                      -{" "}
-                      {new Date(history[editingInvoiceIndex].created_at).toLocaleTimeString(
-                        lang === "ar" ? "ar-EG" : "en-US",
-                        { hour: "2-digit", minute: "2-digit" }
-                      )}
-                    </div>
-                    <div>
-                      <span className="font-arabic font-bold text-slate-700 ml-1">المسؤول المالي:</span>
-                      {getUserName(history[editingInvoiceIndex].billing_officer_email, lang)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Item Search Engine to Add Items */}
-                <div className="bg-sky-50/60 border border-sky-200 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-sky-900 font-bold text-xs">
-                    <Search className="w-4 h-4 text-hospital-blue" />
-                    <span>
-                      {lang === "ar"
-                        ? "محرّك البحث لإضافة مستلزمات طبية جديدة للفاتورة:"
-                        : "Search to add new items to invoice:"}
-                    </span>
-                  </div>
-
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={editingInvoiceSearchQuery}
-                      onChange={(e) => {
-                        setEditingInvoiceSearchQuery(e.target.value);
-                        setEditingSelectedNewItem(null);
-                      }}
-                      placeholder={
-                        lang === "ar"
-                          ? "🔍 اكتب اسم المستلزم الطبي أو الكود للبحث..."
-                          : "🔍 Search item name or code..."
-                      }
-                      className="w-full bg-white border border-sky-300 focus:border-hospital-blue focus:ring-2 focus:ring-sky-200 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800"
-                    />
-
-                    {/* Search Results Dropdown */}
-                    {editingInvoiceSearchQuery.trim().length > 0 && !editingSelectedNewItem && (
-                      <div className="absolute z-20 top-full right-0 left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto divide-y divide-slate-100">
-                        {(() => {
-                          const q = editingInvoiceSearchQuery.trim().toLowerCase();
-                          const matches = inventory.filter(
-                            (item) =>
-                              item.name_ar.toLowerCase().includes(q) ||
-                              item.name_en.toLowerCase().includes(q) ||
-                              item.id.toLowerCase().includes(q)
-                          );
-
-                          if (matches.length === 0) {
-                            return (
-                              <div className="p-3 text-center text-xs text-slate-400 font-arabic">
-                                {lang === "ar" ? "لا توجد نتائج مطابقة" : "No matching items found"}
-                              </div>
-                            );
-                          }
-
-                          return matches.slice(0, 8).map((item) => (
-                            <div
-                              key={item.id}
-                              className="p-2.5 text-right hover:bg-sky-50/80 flex items-center justify-between gap-3 text-xs transition-colors"
-                            >
-                              <div>
-                                <span className="font-bold text-slate-800 block">
-                                  {lang === "ar" ? item.name_ar : item.name_en}
-                                </span>
-                                <span className="text-[10.5px] text-slate-400 font-mono">
-                                  {lang === "ar" ? item.category_ar : item.category_en} |{" "}
-                                  {lang === "ar" ? `الرصيد: ${item.stock}` : `Stock: ${item.stock}`}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="font-bold text-emerald-600 font-mono text-xs">
-                                  {formatCurrency(item.unit_price, lang)}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleAddItemToEditingInvoice(item, 1);
-                                    setEditingInvoiceSearchQuery("");
-                                  }}
-                                  className="px-2.5 py-1 bg-hospital-blue hover:bg-sky-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 shadow-xs cursor-pointer"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  <span>{lang === "ar" ? "إضافة" : "Add"}</span>
-                                </button>
-                              </div>
-                            </div>
-                          ));
-                        })()}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Selected Item Quantity Picker Panel */}
-                  {editingSelectedNewItem && (
-                    <div className="bg-white border border-emerald-300 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fadeIn">
-                      <div>
-                        <span className="text-xs font-black text-slate-800 block">
-                          {lang === "ar" ? editingSelectedNewItem.name_ar : editingSelectedNewItem.name_en}
-                        </span>
-                        <span className="text-[11px] text-emerald-700 font-mono font-bold">
-                          {formatCurrency(editingSelectedNewItem.unit_price, lang)} |{" "}
-                          {lang === "ar"
-                            ? `المتاح بالرصيد: ${editingSelectedNewItem.stock}`
-                            : `Stock: ${editingSelectedNewItem.stock}`}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-bold text-slate-600 whitespace-nowrap">
-                          {lang === "ar" ? "الكمية:" : "Qty:"}
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={editingNewItemQty}
-                          onChange={(e) => setEditingNewItemQty(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-16 text-center bg-slate-50 border border-slate-300 rounded-lg py-1 text-xs font-extrabold font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddItemToEditingInvoice(editingSelectedNewItem, editingNewItemQty)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>{lang === "ar" ? "إضافة للفاتورة" : "Add to Invoice"}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingSelectedNewItem(null);
-                            setEditingInvoiceSearchQuery("");
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Current Invoice Lines Table */}
-                <div>
-                  <h4 className="text-xs font-black text-slate-800 mb-2 flex items-center justify-between">
-                    <span>{lang === "ar" ? "قائمة مستلزمات الفاتورة الحالية:" : "Current Invoice Items:"}</span>
-                    <span className="text-slate-500 font-normal">
-                      {lang === "ar"
-                        ? `عدد الأصناف: (${editingInvoiceLines.length})`
-                        : `Item Count: (${editingInvoiceLines.length})`}
-                    </span>
-                  </h4>
-
-                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                    <table className="w-full text-right text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                          <th className="py-2 px-3 text-center w-8">#</th>
-                          <th className="py-2 px-3 text-right">{lang === "ar" ? "المستلزم" : "Item Name"}</th>
-                          <th className="py-2 px-3 text-center">{lang === "ar" ? "السعر" : "Unit Price"}</th>
-                          <th className="py-2 px-3 text-center">{lang === "ar" ? "الكمية" : "Quantity"}</th>
-                          <th className="py-2 px-3 text-center">{lang === "ar" ? "الإجمالي" : "Total"}</th>
-                          <th className="py-2 px-3 text-center w-12">{lang === "ar" ? "إجراء" : "Action"}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
-                        {editingInvoiceLines.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="py-6 text-center text-slate-400 font-arabic">
-                              {lang === "ar"
-                                ? "لا توجد مستلزمات في الفاتورة. استخدم محرك البحث أعلاه لإضافة مستلزمات."
-                                : "No items in invoice. Use search engine above to add items."}
-                            </td>
-                          </tr>
-                        ) : (
-                          editingInvoiceLines.map((line, lIdx) => (
-                            <tr key={`${line.item_id}-${lIdx}`} className="hover:bg-slate-50/80 transition-colors">
-                              <td className="py-2 px-3 text-center font-mono text-slate-400 text-[11px]">
-                                {lIdx + 1}
-                              </td>
-                              <td className="py-2 px-3 font-bold text-slate-800">
-                                {lang === "ar" ? line.item_name_ar : line.item_name_en}
-                              </td>
-                              <td className="py-2 px-3 text-center font-mono font-semibold text-slate-600">
-                                {formatCurrency(line.unit_price, lang)}
-                              </td>
-                              <td className="py-2 px-3 text-center">
-                                <div className="inline-flex items-center justify-center gap-1 bg-slate-100 border border-slate-200 rounded-lg p-0.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditingLineQtyChange(lIdx, -1)}
-                                    className="w-5 h-5 rounded bg-white hover:bg-slate-200 text-slate-700 font-black text-xs cursor-pointer flex items-center justify-center shadow-3xs"
-                                  >
-                                    -
-                                  </button>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={line.quantity}
-                                    onChange={(e) => handleEditingLineQtySet(lIdx, parseInt(e.target.value))}
-                                    className="w-10 text-center font-mono font-black text-slate-800 text-xs bg-transparent border-none p-0 focus:ring-0"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditingLineQtyChange(lIdx, 1)}
-                                    className="w-5 h-5 rounded bg-white hover:bg-slate-200 text-slate-700 font-black text-xs cursor-pointer flex items-center justify-center shadow-3xs"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="py-2 px-3 text-center font-mono font-bold text-hospital-blue">
-                                {formatCurrency(line.line_total, lang)}
-                              </td>
-                              <td className="py-2 px-3 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveEditingLine(lIdx)}
-                                  className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                                  title={lang === "ar" ? "حذف المستلزم" : "Remove item"}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                      {editingInvoiceLines.length > 0 && (
-                        <tfoot>
-                          <tr className="bg-slate-50 font-black border-t-2 border-slate-200 text-slate-800">
-                            <td colSpan={4} className="py-3 px-3 text-right">
-                              {lang === "ar" ? "إجمالي قيمة الفاتورة المعدلة:" : "Updated Grand Total:"}
-                            </td>
-                            <td className="py-3 px-3 text-center font-mono text-emerald-700 text-sm">
-                              {formatCurrency(
-                                editingInvoiceLines.reduce((acc, l) => acc + l.line_total, 0),
-                                lang
-                              )}
-                            </td>
-                            <td></td>
-                          </tr>
-                        </tfoot>
-                      )}
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => setEditingInvoiceIndex(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 cursor-pointer transition-colors"
-                >
-                  {lang === "ar" ? "إلغاء والتراجع" : "Cancel"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSaveInPlaceInvoiceEdits}
-                  className="px-6 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 shadow-md cursor-pointer transition-all flex items-center gap-2 active:scale-95"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>{lang === "ar" ? "حفظ التغييرات الجديدة" : "Save Changes"}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <AnimatePresence>
+          <AnimatePresence>
             {loginError && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
@@ -3573,6 +3242,336 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans selection:bg-sky-150">
+      {/* In-Place Invoice Editor Modal (تعديل الفاتورة في نفس الصفحة) */}
+      {editingInvoiceIndex !== null && history[editingInvoiceIndex] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 md:p-6 overflow-y-auto animate-fadeIn">
+          <div
+            className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden font-arabic text-right my-auto"
+            dir="rtl"
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-hospital-blue to-sky-700 text-white p-4 md:p-5 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/10 rounded-xl">
+                  <Pencil className="w-5 h-5 text-sky-100" />
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-base font-black">
+                    {lang === "ar" ? "تعديل الفاتورة في الأرشيف" : "Edit Invoice Record"}
+                  </h3>
+                  <p className="text-[11px] text-sky-100 font-mono mt-0.5">
+                    {lang === "ar"
+                      ? `رقم الإيصال: #${history[editingInvoiceIndex].receipt_number}`
+                      : `Receipt Ref: #${history[editingInvoiceIndex].receipt_number}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingInvoiceIndex(null)}
+                className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 md:p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              {/* Patient Name & Ref Details */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {lang === "ar" ? "اسم المريض / الحضور:" : "Patient Name:"}
+                  </label>
+                  <input
+                    type="text"
+                    value={editingInvoicePatientName}
+                    onChange={(e) => setEditingInvoicePatientName(e.target.value)}
+                    className="w-full bg-white border border-slate-300 focus:border-hospital-blue focus:ring-1 focus:ring-hospital-blue rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800"
+                    placeholder={lang === "ar" ? "أدخل اسم المريض..." : "Enter patient name..."}
+                  />
+                </div>
+                <div className="flex flex-col md:items-end text-xs space-y-1 text-slate-500 font-mono">
+                  <div>
+                    <span className="font-arabic font-bold text-slate-700 ml-1">تاريخ الإنشاء:</span>
+                    {new Date(history[editingInvoiceIndex].created_at).toLocaleDateString(
+                      lang === "ar" ? "ar-EG" : "en-US"
+                    )}{" "}
+                    -{" "}
+                    {new Date(history[editingInvoiceIndex].created_at).toLocaleTimeString(
+                      lang === "ar" ? "ar-EG" : "en-US",
+                      { hour: "2-digit", minute: "2-digit" }
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-arabic font-bold text-slate-700 ml-1">المسؤول المالي:</span>
+                    {getUserName(history[editingInvoiceIndex].billing_officer_email, lang)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Item Search Engine to Add Items */}
+              <div className="bg-sky-50/60 border border-sky-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-sky-900 font-bold text-xs">
+                  <Search className="w-4 h-4 text-hospital-blue" />
+                  <span>
+                    {lang === "ar"
+                      ? "محرّك البحث لإضافة مستلزمات طبية جديدة للفاتورة:"
+                      : "Search to add new items to invoice:"}
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={editingInvoiceSearchQuery}
+                    onChange={(e) => {
+                      setEditingInvoiceSearchQuery(e.target.value);
+                      setEditingSelectedNewItem(null);
+                    }}
+                    placeholder={
+                      lang === "ar"
+                        ? "🔍 اكتب اسم المستلزم الطبي أو الكود للبحث..."
+                        : "🔍 Search item name or code..."
+                    }
+                    className="w-full bg-white border border-sky-300 focus:border-hospital-blue focus:ring-2 focus:ring-sky-200 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800"
+                  />
+
+                  {/* Search Results Dropdown */}
+                  {editingInvoiceSearchQuery.trim().length > 0 && !editingSelectedNewItem && (
+                    <div className="absolute z-20 top-full right-0 left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto divide-y divide-slate-100">
+                      {(() => {
+                        const q = editingInvoiceSearchQuery.trim().toLowerCase();
+                        const matches = inventory.filter(
+                          (item) =>
+                            item.name_ar.toLowerCase().includes(q) ||
+                            item.name_en.toLowerCase().includes(q) ||
+                            item.id.toLowerCase().includes(q)
+                        );
+
+                        if (matches.length === 0) {
+                          return (
+                            <div className="p-3 text-center text-xs text-slate-400 font-arabic">
+                              {lang === "ar" ? "لا توجد نتائج مطابقة" : "No matching items found"}
+                            </div>
+                          );
+                        }
+
+                        return matches.slice(0, 8).map((item, idx) => (
+                          <div
+                            key={`${item.id}-${idx}`}
+                            className="p-2.5 text-right hover:bg-sky-50/80 flex items-center justify-between gap-3 text-xs transition-colors"
+                          >
+                            <div>
+                              <span className="font-bold text-slate-800 block">
+                                {lang === "ar" ? item.name_ar : item.name_en}
+                              </span>
+                              <span className="text-[10.5px] text-slate-400 font-mono">
+                                {lang === "ar" ? item.category_ar : item.category_en} |{" "}
+                                {lang === "ar" ? `الرصيد: ${item.stock}` : `Stock: ${item.stock}`}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-bold text-emerald-600 font-mono text-xs">
+                                {formatCurrency(item.unit_price, lang)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleAddItemToEditingInvoice(item, 1);
+                                  setEditingInvoiceSearchQuery("");
+                                }}
+                                className="px-2.5 py-1 bg-hospital-blue hover:bg-sky-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 shadow-xs cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>{lang === "ar" ? "إضافة" : "Add"}</span>
+                              </button>
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Item Quantity Picker Panel */}
+                {editingSelectedNewItem && (
+                  <div className="bg-white border border-emerald-300 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fadeIn">
+                    <div>
+                      <span className="text-xs font-black text-slate-800 block">
+                        {lang === "ar" ? editingSelectedNewItem.name_ar : editingSelectedNewItem.name_en}
+                      </span>
+                      <span className="text-[11px] text-emerald-700 font-mono font-bold">
+                        {formatCurrency(editingSelectedNewItem.unit_price, lang)} |{" "}
+                        {lang === "ar"
+                          ? `المتاح بالرصيد: ${editingSelectedNewItem.stock}`
+                          : `Stock: ${editingSelectedNewItem.stock}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-bold text-slate-600 whitespace-nowrap">
+                        {lang === "ar" ? "الكمية:" : "Qty:"}
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={editingNewItemQty}
+                        onChange={(e) => setEditingNewItemQty(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-16 text-center bg-slate-50 border border-slate-300 rounded-lg py-1 text-xs font-extrabold font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddItemToEditingInvoice(editingSelectedNewItem, editingNewItemQty)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>{lang === "ar" ? "إضافة للفاتورة" : "Add to Invoice"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingSelectedNewItem(null);
+                          setEditingInvoiceSearchQuery("");
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Current Invoice Lines Table */}
+              <div>
+                <h4 className="text-xs font-black text-slate-800 mb-2 flex items-center justify-between">
+                  <span>{lang === "ar" ? "قائمة مستلزمات الفاتورة الحالية:" : "Current Invoice Items:"}</span>
+                  <span className="text-slate-500 font-normal">
+                    {lang === "ar"
+                      ? `عدد الأصناف: (${editingInvoiceLines.length})`
+                      : `Item Count: (${editingInvoiceLines.length})`}
+                  </span>
+                </h4>
+
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                  <table className="w-full text-right text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                        <th className="py-2 px-3 text-center w-8">#</th>
+                        <th className="py-2 px-3 text-right">{lang === "ar" ? "المستلزم" : "Item Name"}</th>
+                        <th className="py-2 px-3 text-center">{lang === "ar" ? "السعر" : "Unit Price"}</th>
+                        <th className="py-2 px-3 text-center">{lang === "ar" ? "الكمية" : "Quantity"}</th>
+                        <th className="py-2 px-3 text-center">{lang === "ar" ? "الإجمالي" : "Total"}</th>
+                        <th className="py-2 px-3 text-center w-12">{lang === "ar" ? "إجراء" : "Action"}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {editingInvoiceLines.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-6 text-center text-slate-400 font-arabic">
+                            {lang === "ar"
+                              ? "لا توجد مستلزمات في الفاتورة. استخدم محرك البحث أعلاه لإضافة مستلزمات."
+                              : "No items in invoice. Use search engine above to add items."}
+                          </td>
+                        </tr>
+                      ) : (
+                        editingInvoiceLines.map((line, lIdx) => (
+                          <tr key={`${line.item_id}-${lIdx}`} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-2 px-3 text-center font-mono text-slate-400 text-[11px]">
+                              {lIdx + 1}
+                            </td>
+                            <td className="py-2 px-3 font-bold text-slate-800">
+                              {lang === "ar" ? line.item_name_ar : line.item_name_en}
+                            </td>
+                            <td className="py-2 px-3 text-center font-mono font-semibold text-slate-600">
+                              {formatCurrency(line.unit_price, lang)}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <div className="inline-flex items-center justify-center gap-1 bg-slate-100 border border-slate-200 rounded-lg p-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditingLineQtyChange(lIdx, -1)}
+                                  className="w-5 h-5 rounded bg-white hover:bg-slate-200 text-slate-700 font-black text-xs cursor-pointer flex items-center justify-center shadow-3xs"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={line.quantity}
+                                  onChange={(e) => handleEditingLineQtySet(lIdx, parseInt(e.target.value))}
+                                  className="w-10 text-center font-mono font-black text-slate-800 text-xs bg-transparent border-none p-0 focus:ring-0"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditingLineQtyChange(lIdx, 1)}
+                                  className="w-5 h-5 rounded bg-white hover:bg-slate-200 text-slate-700 font-black text-xs cursor-pointer flex items-center justify-center shadow-3xs"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 text-center font-mono font-bold text-hospital-blue">
+                              {formatCurrency(line.line_total, lang)}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveEditingLine(lIdx)}
+                                className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                                title={lang === "ar" ? "حذف المستلزم" : "Remove item"}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {editingInvoiceLines.length > 0 && (
+                      <tfoot>
+                        <tr className="bg-slate-50 font-black border-t-2 border-slate-200 text-slate-800">
+                          <td colSpan={4} className="py-3 px-3 text-right">
+                            {lang === "ar" ? "إجمالي قيمة الفاتورة المعدلة:" : "Updated Grand Total:"}
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono text-emerald-700 text-sm">
+                            {formatCurrency(
+                              editingInvoiceLines.reduce((acc, l) => acc + l.line_total, 0),
+                              lang
+                            )}
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setEditingInvoiceIndex(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 cursor-pointer transition-colors"
+              >
+                {lang === "ar" ? "إلغاء والتراجع" : "Cancel"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveInPlaceInvoiceEdits}
+                className="px-6 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 shadow-md cursor-pointer transition-all flex items-center gap-2 active:scale-95"
+              >
+                <Check className="w-4 h-4" />
+                <span>{lang === "ar" ? "حفظ التغييرات الجديدة" : "Save Changes"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <NetworkSyncBar
         currentLang={lang}
         isOnline={isOnline}
@@ -5009,7 +5008,7 @@ export default function App() {
                           <tbody className="divide-y divide-slate-200">
                             {invoice.invoice_lines.map((line, index) => (
                               <tr
-                                key={line.item_id}
+                                key={`${line.item_id}-${index}`}
                                 className="text-slate-800 hover:bg-slate-50/50"
                               >
                                 <td className="py-2 px-3 text-right border-r border-slate-200 font-mono">
@@ -6051,13 +6050,13 @@ export default function App() {
                           );
                         }
 
-                        return matches.map((item) => {
+                        return matches.map((item, idx) => {
                           const isMedicine =
                             item.category_en === "Emergency Drugs" ||
                             item.category_ar === "أدوية وحقن طوارئ";
                           return (
                             <button
-                              key={item.id}
+                              key={`${item.id}-${idx}`}
                               type="button"
                               onClick={() => {
                                 // Add staging element
@@ -7312,7 +7311,7 @@ export default function App() {
 
                           return (
                             <tr
-                              key={item.id}
+                              key={`${item.id}-${idx}`}
                               className={`transition-colors hover:bg-slate-100/70 ${isAlternate ? "bg-slate-50/50" : "bg-white"}`}
                             >
                               <td className="py-3 px-4 border-l border-slate-200/60 text-right">
@@ -7522,7 +7521,7 @@ export default function App() {
                       ? tempPrintRecord.invoice_lines
                       : invoiceLines
                     ).map((line, index) => (
-                      <tr key={line.item_id} className="text-slate-800">
+                      <tr key={`${line.item_id}-${index}`} className="text-slate-800">
                         <td className="py-2 px-3 text-right border-r border-slate-250 font-mono">
                           {index + 1}
                         </td>
@@ -7619,8 +7618,7 @@ export default function App() {
                   return (
                     <div
                       key={invoice.receipt_number + "-" + bIdx}
-                      className="bg-white p-6 text-slate-900 w-full border border-slate-300 rounded-xl shadow-none font-sans print:border-slate-300 print:p-6 print:mb-16 print:shadow-none break-after-page page-break-after"
-                      style={{ pageBreakAfter: "always", breakAfter: "page" }}
+                      className="printable-batch-page bg-white p-6 text-slate-900 w-full border border-slate-300 rounded-xl shadow-none font-sans print:border-none print:p-0 print:m-0 print:shadow-none"
                     >
                       {/* Formal Letterhead Header */}
                       <div

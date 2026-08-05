@@ -76,9 +76,28 @@ export default function SuitesHistory({
   const handleExportInvoicesToExcel = (targets: InvoicePayload[]) => {
     try {
       const wb = XLSX.utils.book_new();
+      const todayStr = new Date().toLocaleDateString("ar-EG");
+      const timeStr = new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
 
       // Sheet 1: كشف فواتير المرضى (إجمالي)
-      const summaryData = targets.map((record, index) => {
+      const summaryAOA: any[][] = [
+        ["مستشفى السلام - كشف فواتير وإيصالات المرضى والمستلزمات المنصرفة"],
+        [`تاريخ ووقت التصدير: ${todayStr} - ${timeStr} | إجمالي عدد الفواتير: ${targets.length}`],
+        [], // Empty row spacer
+        [
+          "م",
+          "اسم المريض",
+          "رقم الإيصال / المرجع",
+          "تاريخ ووقت المعاملة",
+          "بيان المستلزمات والكميات والأسعار",
+          "إجمالي عدد القطع",
+          "إجمالي قيمة الفاتورة (ج.م)",
+          "منفذ الصرف المالي (اسم الحساب)",
+          "تنسيق وتظليل الصف"
+        ]
+      ];
+
+      targets.forEach((record, index) => {
         const itemsDetail = record.invoice_lines
           .map(
             (l) =>
@@ -92,49 +111,99 @@ export default function SuitesHistory({
           ? new Date(record.created_at).toLocaleString("ar-EG")
           : "غير محدد";
 
-        return {
-          "م": index + 1,
-          "اسم المريض": record.patient_name || "بدون اسم",
-          "رقم الإيصال / المرجع": record.receipt_number || "-",
-          "تاريخ ووقت المعاملة": formattedDate,
-          "بيان المستلزمات والكميات والأسعار": itemsDetail,
-          "إجمالي عدد القطع": totalQty,
-          "إجمالي قيمة الفاتورة (ج.م)": record.grand_total,
-          "منفذ الصرف المالي": record.billing_officer_email || "-",
-        };
+        const officerName = getUserName(record.billing_officer_email, currentLang) || record.billing_officer_email || "-";
+        const alternatingLabel = index % 2 === 0 ? "صف عادي (أبيض)" : "صف مضلل (رمادي فاتح)";
+
+        summaryAOA.push([
+          index + 1,
+          record.patient_name || "بدون اسم",
+          record.receipt_number || "-",
+          formattedDate,
+          itemsDetail,
+          totalQty,
+          record.grand_total,
+          officerName,
+          alternatingLabel
+        ]);
       });
 
-      const ws1 = XLSX.utils.json_to_sheet(summaryData);
+      const ws1 = XLSX.utils.aoa_to_sheet(summaryAOA);
+      ws1["!cols"] = [
+        { wch: 6 },  // م
+        { wch: 25 }, // اسم المريض
+        { wch: 20 }, // رقم الإيصال
+        { wch: 24 }, // تاريخ ووقت المعاملة
+        { wch: 55 }, // بيان المستلزمات
+        { wch: 16 }, // إجمالي عدد القطع
+        { wch: 22 }, // إجمالي قيمة الفاتورة
+        { wch: 28 }, // منفذ الصرف المالي
+        { wch: 22 }, // تنسيق الصف
+      ];
       XLSX.utils.book_append_sheet(wb, ws1, "كشف فواتير المرضى");
 
       // Sheet 2: تفاصيل بنود فواتير المرضى (Itemized)
-      const itemizedRows: any[] = [];
+      const itemizedAOA: any[][] = [
+        ["مستشفى السلام - تفاصيل البنود والكميات المصروفة بالفواتير"],
+        [`تاريخ ووقت التصدير: ${todayStr} - ${timeStr}`],
+        [], // Empty row spacer
+        [
+          "م",
+          "رقم الإيصال",
+          "اسم المريض",
+          "تاريخ ووقت المعاملة",
+          "كود المستلزم",
+          "اسم المستلزم الطبي",
+          "سعر المفرد (ج.م)",
+          "الكمية المصروفة",
+          "إجمالي البند (ج.م)",
+          "منفذ الصرف المالي (اسم الحساب)",
+          "تنسيق وتظليل الصف"
+        ]
+      ];
+
       let rowIdx = 1;
       targets.forEach((record) => {
         const formattedDate = record.created_at
           ? new Date(record.created_at).toLocaleString("ar-EG")
           : "غير محدد";
+        const officerName = getUserName(record.billing_officer_email, currentLang) || record.billing_officer_email || "-";
 
         record.invoice_lines.forEach((line) => {
-          itemizedRows.push({
-            "م": rowIdx++,
-            "رقم الإيصال": record.receipt_number || "-",
-            "اسم المريض": record.patient_name || "بدون اسم",
-            "تاريخ ووقت المعاملة": formattedDate,
-            "كود المستلزم": line.item_id,
-            "اسم المستلزم الطبي": line.item_name_ar || line.item_name_en,
-            "سعر المفرد (ج.م)": line.unit_price,
-            "الكمية المصروفة": line.quantity,
-            "إجمالي البند (ج.م)": line.line_total,
-          });
+          const alternatingLabel = rowIdx % 2 === 0 ? "صف مضلل (رمادي فاتح)" : "صف عادي (أبيض)";
+          itemizedAOA.push([
+            rowIdx++,
+            record.receipt_number || "-",
+            record.patient_name || "بدون اسم",
+            formattedDate,
+            line.item_id,
+            line.item_name_ar || line.item_name_en,
+            line.unit_price,
+            line.quantity,
+            line.line_total,
+            officerName,
+            alternatingLabel
+          ]);
         });
       });
 
-      const ws2 = XLSX.utils.json_to_sheet(itemizedRows);
+      const ws2 = XLSX.utils.aoa_to_sheet(itemizedAOA);
+      ws2["!cols"] = [
+        { wch: 6 },  // م
+        { wch: 18 }, // رقم الإيصال
+        { wch: 25 }, // اسم المريض
+        { wch: 24 }, // تاريخ المعاملة
+        { wch: 14 }, // كود المستلزم
+        { wch: 32 }, // اسم المستلزم
+        { wch: 16 }, // سعر المفرد
+        { wch: 16 }, // الكمية المصروفة
+        { wch: 18 }, // إجمالي البند
+        { wch: 28 }, // منفذ الصرف المالي
+        { wch: 22 }, // تنسيق الصف
+      ];
       XLSX.utils.book_append_sheet(wb, ws2, "تفاصيل بنود الفواتير");
 
-      const todayStr = new Date().toISOString().split("T")[0];
-      XLSX.writeFile(wb, `فواتير_المرضى_مستشفى_السلام_${todayStr}.xlsx`);
+      const fileDate = new Date().toISOString().split("T")[0];
+      XLSX.writeFile(wb, `فواتير_المرضى_مستشفى_السلام_${fileDate}.xlsx`);
     } catch (err) {
       console.error("Error exporting invoices to excel:", err);
     }

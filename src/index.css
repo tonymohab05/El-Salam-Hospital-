@@ -91,18 +91,32 @@ body {
   }
 
   #printable-batch-receipts {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 auto !important;
-    padding: 8mm 10mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background: white !important;
     display: block !important;
+  }
+
+  .printable-batch-page {
+    position: relative !important;
+    width: 100% !important;
     box-sizing: border-box !important;
+    padding: 8mm 10mm !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    background: white !important;
+  }
+
+  .printable-batch-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   #printable-restock-invoice {

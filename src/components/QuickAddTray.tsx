@@ -42,13 +42,13 @@ export default function QuickAddTray({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        {quickItems.map((item) => {
+        {quickItems.map((item, idx) => {
           const matchedLine = invoiceLines.find((l) => l.item_id === item.id);
           const selectedQty = matchedLine ? matchedLine.quantity : 0;
           const isSelected = selectedQty > 0;
           return (
             <button
-              key={item.id}
+              key={`${item.id}-${idx}`}
               onClick={() => onAddItem(item)}
               title={currentLang === "ar" ? item.name_ar : item.name_en}
               className={`group relative flex flex-col justify-between p-2 rounded border text-left transition-all cursor-pointer ${
