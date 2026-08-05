@@ -18,7 +18,7 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm 10mm !important;
+    margin: 0mm !important;
   }
   html, body {
     background-color: #ffffff !important;
@@ -27,6 +27,8 @@ body {
     padding: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    width: 100% !important;
+    height: 100% !important;
   }
   
   /* Hide all elements by default during print */
@@ -65,11 +67,12 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 0 !important;
+    padding: 8mm 10mm !important;
     border: none !important;
     box-shadow: none !important;
     background: white !important;
     display: block !important;
+    box-sizing: border-box !important;
   }
 
   #printable-consumption-report {
@@ -79,11 +82,12 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 0 !important;
+    padding: 8mm 10mm !important;
     border: none !important;
     box-shadow: none !important;
     background: white !important;
     display: block !important;
+    box-sizing: border-box !important;
   }
 
   #printable-batch-receipts {
@@ -93,11 +97,12 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 0 !important;
+    padding: 8mm 10mm !important;
     border: none !important;
     box-shadow: none !important;
     background: white !important;
     display: block !important;
+    box-sizing: border-box !important;
   }
 
   #printable-restock-invoice {
@@ -107,11 +112,12 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 0 !important;
+    padding: 8mm 10mm !important;
     border: none !important;
     box-shadow: none !important;
     background: white !important;
     display: block !important;
+    box-sizing: border-box !important;
   }
 
   /* Explicit no-print elements */

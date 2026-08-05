@@ -272,7 +272,7 @@ export default function DailyConsumptionReport({
           <div className="absolute top-0 bottom-0 left-0 w-1 bg-amber-500" />
           <div className={`${lang === "ar" ? "text-right" : "text-left"}`}>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight font-arabic">
-              {lang === "ar" ? "إجمالي المبلغ في الدرج" : "Total Cash Drawer Amount"}
+              {lang === "ar" ? "تكلفة المستلزمات الإجمالية" : "Total Supplies Cost"}
             </span>
             <p className="text-lg sm:text-xl font-black text-emerald-700 font-mono mt-0.5 sm:mt-1">
               {formatCurrency(aggregatedData.totalCost, lang)}
@@ -292,7 +292,7 @@ export default function DailyConsumptionReport({
           </span>
           <span className="text-[10px] sm:text-[10.5px] font-bold text-slate-500 font-mono select-none">
             {lang === "ar"
-              ? `عدد الأصناف: ${formatArabicDigits(aggregatedData.items.length, lang)}`
+              ? `عدد الأصناف : ${formatArabicDigits(aggregatedData.items.length, lang)}`
               : `Total items: ${aggregatedData.items.length}`}
           </span>
         </div>

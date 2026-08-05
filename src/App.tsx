@@ -7379,7 +7379,7 @@ export default function App() {
           <div className="absolute top-0 left-0 w-0 h-0 overflow-hidden opacity-0 pointer-events-none print:static print:w-full print:h-auto print:opacity-100 print:overflow-visible print:pointer-events-auto">
             <div
               id="printable-receipt-card"
-              className={`bg-white p-6 text-slate-900 w-full max-w-[148mm] mx-auto print:max-w-full print:p-0 print:border-none print:shadow-none border border-slate-300 rounded-xl shadow-md font-sans ${
+              className={`bg-white p-6 text-slate-900 w-full max-w-[210mm] mx-auto print:max-w-full print:p-0 print:border-none print:shadow-none border border-slate-300 rounded-xl shadow-md font-sans ${
                 printMode === "batch" ? "print:hidden" : ""
               }`}
             >
@@ -7605,7 +7605,7 @@ export default function App() {
             {printMode === "batch" && (
               <div
                 id="printable-batch-receipts"
-                className="w-full max-w-[148mm] mx-auto space-y-12 bg-white text-slate-900 print:text-black"
+                className="w-full max-w-[210mm] mx-auto space-y-12 bg-white text-slate-900 print:text-black"
               >
                 {batchInvoices.map((invoice, bIdx) => {
                   const invoiceTotals = invoice.invoice_lines.reduce(
