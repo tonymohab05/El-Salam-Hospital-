@@ -230,67 +230,64 @@ export default function DailyConsumptionReport({
       {/* KPI Stats Panel */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 print:grid print:grid-cols-3">
         {/* Metric 1 */}
-        <div className="bg-white rounded-2xl sm:rounded-xl border border-slate-250 p-3.5 sm:p-4 shadow-3xs flex items-center justify-between relative overflow-hidden">
-          <div className="absolute top-0 bottom-0 left-0 w-1 bg-sky-500" />
+        <div className="bg-white rounded-2xl border-2 border-slate-300 border-t-4 border-t-sky-500 p-3.5 sm:p-4 shadow-3xs flex items-center justify-between relative overflow-hidden">
           <div className={`${lang === "ar" ? "text-right" : "text-left"}`}>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight font-arabic">
+            <span className="text-xs font-bold text-slate-500 font-arabic block">
               {lang === "ar" ? "جلسات و فواتير مسجلة" : "Daily Completed Receipts"}
             </span>
-            <p className="text-lg sm:text-xl font-black text-slate-800 font-mono mt-0.5 sm:mt-1">
+            <p className="text-lg sm:text-xl font-black text-slate-800 font-mono mt-1">
               {formatArabicDigits(aggregatedData.invoiceCount, lang)}{" "}
-              <span className="text-xs font-bold text-slate-500 font-arabic">
+              <span className="text-xs font-bold text-slate-600 font-arabic">
                 {lang === "ar" ? "فواتير" : "Vouchers"}
               </span>
             </p>
           </div>
-          <div className="p-2.5 bg-sky-50 text-sky-600 rounded-xl shrink-0">
+          <div className="p-2.5 bg-sky-50 text-sky-600 rounded-2xl border border-sky-100 shrink-0">
             <ClipboardList className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 2 */}
-        <div className="bg-white rounded-2xl sm:rounded-xl border border-slate-250 p-3.5 sm:p-4 shadow-3xs flex items-center justify-between relative overflow-hidden">
-          <div className="absolute top-0 bottom-0 left-0 w-1 bg-emerald-500" />
+        <div className="bg-white rounded-2xl border-2 border-slate-300 border-t-4 border-t-emerald-500 p-3.5 sm:p-4 shadow-3xs flex items-center justify-between relative overflow-hidden">
           <div className={`${lang === "ar" ? "text-right" : "text-left"}`}>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight font-arabic">
+            <span className="text-xs font-bold text-slate-500 font-arabic block">
               {lang === "ar" ? "إجمالي المستهلكات المنصرفة" : "Disbursed Supplies"}
             </span>
-            <p className="text-lg sm:text-xl font-black text-slate-800 font-mono mt-0.5 sm:mt-1">
+            <p className="text-lg sm:text-xl font-black text-slate-800 font-mono mt-1">
               {formatArabicDigits(aggregatedData.totalQuantity, lang)}{" "}
-              <span className="text-xs font-bold text-slate-500 font-arabic">
+              <span className="text-xs font-bold text-slate-600 font-arabic">
                 {lang === "ar" ? "وحدة طبية" : "Units"}
               </span>
             </p>
           </div>
-          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 shrink-0">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 3 */}
-        <div className="bg-white rounded-2xl sm:rounded-xl border border-slate-250 p-3.5 sm:p-4 shadow-3xs flex items-center justify-between relative overflow-hidden">
-          <div className="absolute top-0 bottom-0 left-0 w-1 bg-amber-500" />
+        <div className="bg-white rounded-2xl border-2 border-slate-300 border-t-4 border-t-amber-500 p-3.5 sm:p-4 shadow-3xs flex items-center justify-between relative overflow-hidden">
           <div className={`${lang === "ar" ? "text-right" : "text-left"}`}>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight font-arabic">
+            <span className="text-xs font-bold text-slate-500 font-arabic block">
               {lang === "ar" ? "تكلفة المستلزمات الإجمالية" : "Total Supplies Cost"}
             </span>
-            <p className="text-lg sm:text-xl font-black text-emerald-700 font-mono mt-0.5 sm:mt-1">
+            <p className="text-lg sm:text-xl font-black text-emerald-700 font-mono mt-1">
               {formatCurrency(aggregatedData.totalCost, lang)}
             </p>
           </div>
-          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-2xl border border-amber-100 shrink-0">
             <Coins className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* Consumption Breakdown Container */}
-      <div className="bg-white rounded-2xl sm:rounded-xl border border-slate-250 shadow-3xs overflow-hidden">
-        <div className="bg-slate-50 border-b border-slate-200 p-3.5 sm:p-4 flex items-center justify-between">
-          <span className="text-xs font-black text-slate-800 font-arabic flex items-center gap-1.5">
+      <div className="bg-white rounded-2xl border-2 border-slate-300 shadow-3xs overflow-hidden">
+        <div className="bg-slate-50 border-b-2 border-slate-300 p-3.5 sm:p-4 flex items-center justify-between">
+          <span className="text-xs sm:text-sm font-black text-slate-800 font-arabic flex items-center gap-1.5">
             📋 {lang === "ar" ? "بيان تفصيلي بالمستلزمات المستهلكة" : "Supplies Consumption Ledger"}
           </span>
-          <span className="text-[10px] sm:text-[10.5px] font-bold text-slate-500 font-mono select-none">
+          <span className="text-xs font-bold text-slate-600 font-mono select-none">
             {lang === "ar"
               ? `عدد الأصناف : ${formatArabicDigits(aggregatedData.items.length, lang)}`
               : `Total items: ${aggregatedData.items.length}`}
@@ -300,11 +297,11 @@ export default function DailyConsumptionReport({
         {aggregatedData.items.length > 0 ? (
           <>
             {/* Mobile View: Clean Responsive Cards (Hidden in print) */}
-            <div className="block sm:hidden print:hidden divide-y divide-slate-100">
+            <div className="block sm:hidden print:hidden divide-y divide-slate-200">
               {aggregatedData.items.map((item, index) => (
                 <div key={`${item.id}-${index}`} className="p-3.5 hover:bg-slate-50/80 transition-colors space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                    <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                       #{formatArabicDigits(index + 1, lang)}
                     </span>
                     <span className="text-[10px] font-bold font-arabic px-2 py-0.5 bg-sky-50 text-sky-700 rounded-md border border-sky-100">
@@ -321,9 +318,9 @@ export default function DailyConsumptionReport({
                     </span>
                   </div>
 
-                  <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-150 grid grid-cols-3 gap-2 text-center items-center">
+                  <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200 grid grid-cols-3 gap-2 text-center items-center">
                     <div>
-                      <span className="text-[9px] text-slate-400 font-arabic block font-medium">
+                      <span className="text-[9px] text-slate-500 font-arabic block font-medium">
                         {lang === "ar" ? "سعر المفرد" : "Tariff"}
                       </span>
                       <span className="font-mono text-xs font-semibold text-slate-700 mt-0.5 block">
@@ -332,16 +329,16 @@ export default function DailyConsumptionReport({
                     </div>
 
                     <div>
-                      <span className="text-[9px] text-slate-400 font-arabic block font-medium">
+                      <span className="text-[9px] text-slate-500 font-arabic block font-medium">
                         {lang === "ar" ? "المنصرف" : "Consumed"}
                       </span>
-                      <span className="inline-block px-2 py-0.5 rounded-full font-black text-xs bg-emerald-100/80 text-emerald-800 font-mono mt-0.5">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full font-black text-xs bg-emerald-100 text-emerald-800 font-mono mt-0.5 border border-emerald-200">
                         {formatArabicDigits(item.qty, lang)}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-[9px] text-slate-400 font-arabic block font-medium">
+                      <span className="text-[9px] text-slate-500 font-arabic block font-medium">
                         {lang === "ar" ? "الإجمالي" : "Total"}
                       </span>
                       <span className="font-mono text-xs font-extrabold text-slate-900 mt-0.5 block">
@@ -353,43 +350,43 @@ export default function DailyConsumptionReport({
               ))}
             </div>
 
-            {/* Desktop & Print View: Full data table */}
+            {/* Desktop & Print View: Full data table with grid borders */}
             <div className="hidden sm:block print:block overflow-x-auto">
               <table className="w-full text-right border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-100 text-slate-750 font-bold border-b border-slate-250 font-arabic select-none">
-                    <th className="py-3 px-4 border-r border-slate-200 w-12 text-center">#</th>
-                    <th className="py-3 px-4 border-r border-slate-200">{lang === "ar" ? "الصنف الطبي" : "Medical Item"}</th>
-                    <th className="py-3 px-4 border-r border-slate-200">{lang === "ar" ? "التصنيف" : "Category"}</th>
-                    <th className="py-3 px-4 border-r border-slate-200 text-center w-24">{lang === "ar" ? "سعر المفرد" : "Unit Price"}</th>
-                    <th className="py-3 px-4 border-r border-slate-200 text-center w-28">{lang === "ar" ? "الكمية المستهلكة" : "Consumed Qty"}</th>
+                  <tr className="bg-slate-100 text-slate-900 font-black border-b-2 border-slate-300 font-arabic select-none">
+                    <th className="py-3 px-3 border-l border-slate-300 w-12 text-center">#</th>
+                    <th className="py-3 px-4 border-l border-slate-300 text-right">{lang === "ar" ? "الصنف الطبي" : "Medical Item"}</th>
+                    <th className="py-3 px-4 border-l border-slate-300 text-center">{lang === "ar" ? "التصنيف" : "Category"}</th>
+                    <th className="py-3 px-4 border-l border-slate-300 text-center w-28">{lang === "ar" ? "سعر المفرد" : "Unit Price"}</th>
+                    <th className="py-3 px-4 border-l border-slate-300 text-center w-32">{lang === "ar" ? "الكمية المستهلكة" : "Consumed Qty"}</th>
                     <th className="py-3 px-4 text-left">{lang === "ar" ? "إجمالي المالية" : "Total Price"}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-150">
+                <tbody className="divide-y divide-slate-300 border-b border-slate-300">
                   {aggregatedData.items.map((item, index) => (
-                    <tr key={`${item.id}-${index}`} className="text-slate-850 hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 px-4 border-r border-slate-150 font-mono text-center text-slate-400 font-bold">
+                    <tr key={`${item.id}-${index}`} className="text-slate-900 hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3.5 px-3 border-l border-slate-300 font-mono text-center text-slate-400 font-bold">
                         {formatArabicDigits(index + 1, lang)}
                       </td>
-                      <td className="py-3 px-4 border-r border-slate-150 text-right">
-                        <div className="font-bold text-slate-900 font-arabic text-xs leading-snug">
+                      <td className="py-3.5 px-4 border-l border-slate-300 text-right">
+                        <div className="font-black text-slate-900 font-arabic text-xs leading-snug">
                           {lang === "ar" ? item.name_ar : item.name_en}
                         </div>
-                        <span className="text-[9.5px] text-slate-400 font-mono block mt-0.5">{item.id}</span>
+                        <span className="text-[10px] text-slate-400 font-mono block mt-0.5">{item.id}</span>
                       </td>
-                      <td className="py-3 px-4 border-r border-slate-150 text-slate-650 font-arabic font-bold text-[10.5px]">
+                      <td className="py-3.5 px-4 border-l border-slate-300 text-center text-slate-800 font-arabic font-bold text-xs">
                         {lang === "ar" ? item.category_ar : item.category_en}
                       </td>
-                      <td className="py-3 px-4 border-r border-slate-150 text-center font-mono font-medium text-slate-700">
+                      <td className="py-3.5 px-4 border-l border-slate-300 text-center font-mono font-semibold text-slate-800 text-xs">
                         {formatCurrency(item.unit_price, lang)}
                       </td>
-                      <td className="py-3 px-4 border-r border-slate-150 text-center">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full font-black text-xs bg-emerald-50 text-emerald-750 font-mono">
+                      <td className="py-3.5 px-4 border-l border-slate-300 text-center">
+                        <span className="inline-block px-3 py-0.5 rounded-full font-black text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono">
                           {formatArabicDigits(item.qty, lang)}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-left font-mono font-bold text-slate-900">
+                      <td className="py-3.5 px-4 text-left font-mono font-black text-slate-900 text-xs">
                         {formatCurrency(item.total, lang)}
                       </td>
                     </tr>
