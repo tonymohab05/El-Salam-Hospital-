@@ -2,7 +2,7 @@ import React from "react";
 import { History, Search, ArrowUpRight, Trash2, Calendar, ShoppingBag, Database, FileText, Pencil, Printer, Download, FileDown, FileSpreadsheet, SlidersHorizontal, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight } from "lucide-react";
 import * as XLSX from "xlsx";
 import { InvoicePayload, Language } from "../types";
-import { formatCurrency } from "../utils";
+import { formatCurrency, getUserName } from "../utils";
 
 interface SuitesHistoryProps {
   currentLang: Language;
@@ -15,6 +15,10 @@ interface SuitesHistoryProps {
   activeIndex: number | null;
   onViewDetail: (index: number) => void;
   onPrintBatch?: (filteredList: InvoicePayload[]) => void;
+  startDate?: string;
+  onStartDateChange?: (date: string) => void;
+  endDate?: string;
+  onEndDateChange?: (date: string) => void;
 }
 
 export default function SuitesHistory({
@@ -28,6 +32,10 @@ export default function SuitesHistory({
   activeIndex,
   onViewDetail,
   onPrintBatch,
+  startDate: propsStartDate,
+  onStartDateChange,
+  endDate: propsEndDate,
+  onEndDateChange,
 }: SuitesHistoryProps) {
   // Helper for today's date in YYYY-MM-DD local timezone format
   const getTodayDateString = () => {
@@ -37,9 +45,23 @@ export default function SuitesHistory({
   };
 
   // Advanced Filter Local States
-  // Pre-load today's date so that today's invoices are loaded page-by-day initially
-  const [startDate, setStartDate] = React.useState<string>(getTodayDateString());
-  const [endDate, setEndDate] = React.useState<string>(getTodayDateString());
+  // Controlled date props with local state fallback
+  const [internalStartDate, setInternalStartDate] = React.useState<string>(getTodayDateString());
+  const [internalEndDate, setInternalEndDate] = React.useState<string>(getTodayDateString());
+
+  const startDate = propsStartDate !== undefined ? propsStartDate : internalStartDate;
+  const endDate = propsEndDate !== undefined ? propsEndDate : internalEndDate;
+
+  const setStartDate = (val: string) => {
+    if (onStartDateChange) onStartDateChange(val);
+    setInternalStartDate(val);
+  };
+
+  const setEndDate = (val: string) => {
+    if (onEndDateChange) onEndDateChange(val);
+    setInternalEndDate(val);
+  };
+
   const [startTime, setStartTime] = React.useState<string>("");
   const [endTime, setEndTime] = React.useState<string>("");
   const [minAmount, setMinAmount] = React.useState<string>("");
@@ -785,6 +807,9 @@ export default function SuitesHistory({
                 <th className="py-2 px-3 text-slate-500 font-bold font-arabic text-center">
                   {currentLang === "ar" ? "تاريخ الحفظ" : "Committed Date"}
                 </th>
+                <th className="py-2 px-3 text-slate-500 font-bold font-arabic text-center">
+                  {currentLang === "ar" ? "المسؤول المالي" : "Billing Officer"}
+                </th>
                 <th className="py-2 px-3 text-hospital-blue font-bold font-arabic text-center">
                   {currentLang === "ar" ? "القيمة الكلية" : "Grand Total"}
                 </th>
@@ -850,6 +875,13 @@ export default function SuitesHistory({
                           )}
                         </span>
                       </div>
+                    </td>
+
+                    {/* Billing Officer */}
+                    <td className="py-2.5 px-3 text-center font-arabic text-[11px]">
+                      <span className="inline-block bg-sky-50 text-sky-800 font-bold px-2 py-0.5 rounded border border-sky-200">
+                        {getUserName(invoice.billing_officer_email, currentLang)}
+                      </span>
                     </td>
 
                     {/* Financial value */}

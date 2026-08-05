@@ -102,7 +102,17 @@ import HospitalHeader from "./components/HospitalHeader";
 import SuitesHistory from "./components/SuitesHistory";
 import HospitalLogo from "./components/HospitalLogo";
 import DailyConsumptionReport from "./components/DailyConsumptionReport";
+import NetworkSyncBar from "./components/NetworkSyncBar";
 import { getUserName } from "./utils";
+import {
+  getPendingQueueCount,
+  queuePendingInvoice,
+  queuePendingDeletedInvoice,
+  queuePendingItem,
+  queuePendingDeletedItem,
+  queuePendingRestock,
+  processPendingSyncQueue,
+} from "./utils/offlineSync";
 
 // Session interface for multiple open "kasema" (receipt sessions)
 interface ReceiptSession {
@@ -249,6 +259,16 @@ export default function App() {
 
   const [supabaseLoading, setSupabaseLoading] = useState<boolean>(false);
   const [supabaseSyncStatus, setSupabaseSyncStatus] = useState<"connected" | "error" | "offline">("offline");
+
+  // Offline / Online sync states
+  const [isOnline, setIsOnline] = useState<boolean>(() =>
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(() =>
+    getPendingQueueCount()
+  );
+  const [isSyncingPending, setIsSyncingPending] = useState<boolean>(false);
+  const [syncSuccessMessage, setSyncSuccessMessage] = useState<string | null>(null);
 
   // Multiple sessions / kasema states
   const [sessions, setSessions] = useState<ReceiptSession[]>([
@@ -557,7 +577,12 @@ export default function App() {
         try {
           const addedRestocks = updatedList.filter((r) => !restockInvoices.some((o) => o.id === r.id));
           for (const r of addedRestocks) {
-            await insertSupabaseRestockInvoice(r);
+            if (navigator.onLine) {
+              const ok = await insertSupabaseRestockInvoice(r);
+              if (!ok) queuePendingRestock(r);
+            } else {
+              queuePendingRestock(r);
+            }
           }
 
           for (const r of updatedList) {
@@ -575,8 +600,10 @@ export default function App() {
               }
             }
           }
+          setPendingSyncCount(getPendingQueueCount());
         } catch (err) {
           console.error("Error syncing restocks in background with Supabase:", err);
+          setPendingSyncCount(getPendingQueueCount());
         }
       })();
     }
@@ -667,17 +694,7 @@ export default function App() {
     email?: string;
     username?: string;
     role: "SUPER_ADMIN" | "RECEPTION";
-  } | null>(() => {
-    const cached = localStorage.getItem("el_salam_er_auth_v1");
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {
-        console.error("Failed to parse cached auth state", e);
-      }
-    }
-    return null;
-  });
+  } | null>(null);
 
   const [loginRole, setLoginRole] = useState<"SUPER_ADMIN" | "RECEPTION">(
     "RECEPTION",
@@ -975,7 +992,12 @@ export default function App() {
           // Find deleted items to remove from Supabase
           const deletedItems = inventory.filter((item) => !newInv.some((n) => n.id === item.id));
           for (const item of deletedItems) {
-            await deleteSupabaseMedicalItem(item.id);
+            if (navigator.onLine) {
+              const ok = await deleteSupabaseMedicalItem(item.id);
+              if (!ok) queuePendingDeletedItem(item.id);
+            } else {
+              queuePendingDeletedItem(item.id);
+            }
           }
 
           // Find upserted/modified items
@@ -984,10 +1006,17 @@ export default function App() {
             return !old || JSON.stringify(old) !== JSON.stringify(item);
           });
           for (const item of upsertedItems) {
-            await upsertSupabaseMedicalItem(item);
+            if (navigator.onLine) {
+              const ok = await upsertSupabaseMedicalItem(item);
+              if (!ok) queuePendingItem(item);
+            } else {
+              queuePendingItem(item);
+            }
           }
+          setPendingSyncCount(getPendingQueueCount());
         } catch (err) {
           console.error("Error syncing inventory in background with Supabase:", err);
+          setPendingSyncCount(getPendingQueueCount());
         }
       })();
     }
@@ -998,84 +1027,130 @@ export default function App() {
     localStorage.setItem("el_salam_er_operators_v1", JSON.stringify(newOps));
   };
 
-  // Load transaction log index on startup (Supabase with localStorage fallback)
-  useEffect(() => {
-    async function loadAllDatabase() {
-      if (!isSupabaseConfigured) {
-        setSupabaseSyncStatus("offline");
-        return;
-      }
-
-      setSupabaseLoading(true);
-      try {
-        console.log("Connecting to Supabase and pulling latest data...");
-        
-        // 1. Fetch Inventory
-        const dbInventory = await fetchSupabaseInventory();
-        if (dbInventory !== null && dbInventory.length > 0) {
-          setInventory(dbInventory);
-          localStorage.setItem("el_salam_er_inventory_v1", JSON.stringify(dbInventory));
-        } else if (dbInventory !== null && dbInventory.length === 0) {
-          // If Supabase table is empty, seed local inventory items to Supabase
-          const cachedInv = localStorage.getItem("el_salam_er_inventory_v1");
-          const localItems: MedicalItem[] = cachedInv ? JSON.parse(cachedInv) : HOSPITAL_INVENTORY;
-          if (localItems && localItems.length > 0) {
-            console.log("Supabase inventory is empty. Syncing local inventory to Supabase...");
-            for (const item of localItems) {
-              await upsertSupabaseMedicalItem(item);
-            }
-            setInventory(localItems);
-          }
-        }
-
-        // 2. Fetch Patient Invoices History
-        const dbHistory = await fetchSupabasePatientInvoices();
-        if (dbHistory !== null && dbHistory.length > 0) {
-          setHistory(dbHistory);
-          localStorage.setItem("cairo_er_ledger_history_v1", JSON.stringify(dbHistory));
-        } else if (dbHistory !== null && dbHistory.length === 0) {
-          // If Supabase table is empty, sync local history if present
-          const cachedLedger = localStorage.getItem("cairo_er_ledger_history_v1");
-          if (cachedLedger) {
-            try {
-              const localHistory: InvoicePayload[] = JSON.parse(cachedLedger);
-              if (localHistory && localHistory.length > 0) {
-                console.log("Supabase history is empty. Syncing local history to Supabase...");
-                for (const inv of localHistory) {
-                  await insertSupabasePatientInvoice(inv);
-                }
-                setHistory(localHistory);
-              }
-            } catch (e) {
-              console.error(e);
-            }
-          }
-        }
-
-        // 3. Fetch Restock Invoices
-        const dbRestocks = await fetchSupabaseRestockInvoices();
-        if (dbRestocks !== null && dbRestocks.length > 0) {
-          setRestockInvoices(dbRestocks);
-          localStorage.setItem("el_salam_er_restock_invoices_v1", JSON.stringify(dbRestocks));
-        }
-
-        // 4. Fetch App Users / Reception Operators
-        const dbOperators = await fetchSupabaseAppUsers();
-        if (dbOperators !== null && dbOperators.length > 0) {
-          setOperators(dbOperators);
-          localStorage.setItem("el_salam_er_operators_v1", JSON.stringify(dbOperators));
-        }
-
-        setSupabaseSyncStatus("connected");
-      } catch (err) {
-        console.error("Critical error syncing with Supabase database:", err);
-        setSupabaseSyncStatus("error");
-      } finally {
-        setSupabaseLoading(false);
-      }
+  const loadAllDatabase = async () => {
+    if (!isSupabaseConfigured) {
+      setSupabaseSyncStatus("offline");
+      return;
     }
 
-    // Load from local cache first for instant response
+    setSupabaseLoading(true);
+    try {
+      console.log("Connecting to Supabase and pulling latest data...");
+      
+      // 1. Fetch Inventory
+      const dbInventory = await fetchSupabaseInventory();
+      if (dbInventory !== null && dbInventory.length > 0) {
+        setInventory(dbInventory);
+        localStorage.setItem("el_salam_er_inventory_v1", JSON.stringify(dbInventory));
+      } else if (dbInventory !== null && dbInventory.length === 0) {
+        const cachedInv = localStorage.getItem("el_salam_er_inventory_v1");
+        const localItems: MedicalItem[] = cachedInv ? JSON.parse(cachedInv) : HOSPITAL_INVENTORY;
+        if (localItems && localItems.length > 0) {
+          console.log("Supabase inventory is empty. Syncing local inventory to Supabase...");
+          for (const item of localItems) {
+            await upsertSupabaseMedicalItem(item);
+          }
+          setInventory(localItems);
+        }
+      }
+
+      // 2. Fetch Patient Invoices History
+      const dbHistory = await fetchSupabasePatientInvoices();
+      if (dbHistory !== null && dbHistory.length > 0) {
+        setHistory(dbHistory);
+        localStorage.setItem("cairo_er_ledger_history_v1", JSON.stringify(dbHistory));
+      } else if (dbHistory !== null && dbHistory.length === 0) {
+        const cachedLedger = localStorage.getItem("cairo_er_ledger_history_v1");
+        if (cachedLedger) {
+          try {
+            const localHistory: InvoicePayload[] = JSON.parse(cachedLedger);
+            if (localHistory && localHistory.length > 0) {
+              console.log("Supabase history is empty. Syncing local history to Supabase...");
+              for (const inv of localHistory) {
+                await insertSupabasePatientInvoice(inv);
+              }
+              setHistory(localHistory);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+
+      // 3. Fetch Restock Invoices
+      const dbRestocks = await fetchSupabaseRestockInvoices();
+      if (dbRestocks !== null && dbRestocks.length > 0) {
+        setRestockInvoices(dbRestocks);
+        localStorage.setItem("el_salam_er_restock_invoices_v1", JSON.stringify(dbRestocks));
+      }
+
+      // 4. Fetch App Users / Reception Operators
+      const dbOperators = await fetchSupabaseAppUsers();
+      if (dbOperators !== null && dbOperators.length > 0) {
+        setOperators(dbOperators);
+        localStorage.setItem("el_salam_er_operators_v1", JSON.stringify(dbOperators));
+      }
+
+      setSupabaseSyncStatus("connected");
+    } catch (err) {
+      console.error("Critical error syncing with Supabase database:", err);
+      setSupabaseSyncStatus("error");
+    } finally {
+      setSupabaseLoading(false);
+    }
+  };
+
+  const triggerAutoSync = async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setIsOnline(false);
+      setSupabaseSyncStatus("offline");
+      return;
+    }
+    if (!isSupabaseConfigured) return;
+
+    setIsSyncingPending(true);
+    try {
+      const result = await processPendingSyncQueue();
+      setPendingSyncCount(result.remainingCount);
+
+      if (result.syncedCount > 0 && result.remainingCount === 0) {
+        setSupabaseSyncStatus("connected");
+        setSyncSuccessMessage(
+          lang === "ar"
+            ? "✓ تم استعادة الاتصال بالسيرفر ومزامنة جميع الإيصالات والتعديلات المحفوظة أوفلاين تلقائياً بنجاح!"
+            : "✓ Connection restored! All offline saved receipts synced automatically."
+        );
+        setTimeout(() => setSyncSuccessMessage(null), 5000);
+        await loadAllDatabase();
+      } else if (result.remainingCount > 0) {
+        setSupabaseSyncStatus("offline");
+      } else {
+        setSupabaseSyncStatus("connected");
+      }
+    } catch (err) {
+      console.error("Auto sync error:", err);
+      setSupabaseSyncStatus("offline");
+    } finally {
+      setIsSyncingPending(false);
+    }
+  };
+
+  // Online / Offline Network listener & database load on startup
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      triggerAutoSync();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSupabaseSyncStatus("offline");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    // Initial load from local cache first for instant response
     const cachedLedger = localStorage.getItem("cairo_er_ledger_history_v1");
     if (cachedLedger) {
       try {
@@ -1085,7 +1160,20 @@ export default function App() {
       }
     }
 
-    loadAllDatabase();
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setIsOnline(false);
+      setSupabaseSyncStatus("offline");
+    } else {
+      loadAllDatabase();
+      if (getPendingQueueCount() > 0) {
+        triggerAutoSync();
+      }
+    }
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   // Update localStorage when logs modify
@@ -1102,15 +1190,27 @@ export default function App() {
           // Identify deleted invoices to remove from Supabase
           const deletedInvoices = history.filter((inv) => !newHistory.some((n) => n.receipt_number === inv.receipt_number));
           for (const inv of deletedInvoices) {
-            await deleteSupabasePatientInvoice(inv.receipt_number);
+            if (navigator.onLine) {
+              const ok = await deleteSupabasePatientInvoice(inv.receipt_number);
+              if (!ok) queuePendingDeletedInvoice(inv.receipt_number);
+            } else {
+              queuePendingDeletedInvoice(inv.receipt_number);
+            }
           }
 
           // Upsert all items in newHistory so new or modified invoices update Supabase
           for (const inv of newHistory) {
-            await insertSupabasePatientInvoice(inv);
+            if (navigator.onLine) {
+              const ok = await insertSupabasePatientInvoice(inv);
+              if (!ok) queuePendingInvoice(inv);
+            } else {
+              queuePendingInvoice(inv);
+            }
           }
+          setPendingSyncCount(getPendingQueueCount());
         } catch (err) {
           console.error("Error syncing invoices in background with Supabase:", err);
+          setPendingSyncCount(getPendingQueueCount());
         }
       })();
     }
@@ -2212,10 +2312,15 @@ export default function App() {
 
     saveHistoryToCache(newHistory);
 
+    const isCurrentlyOnline = typeof navigator !== "undefined" && navigator.onLine;
     setSaveSuccessMessage(
       lang === "ar"
-        ? `✓ تم حفظ وتحديث الإيصال بنجاح وتفادي التكرار، وتأكيد المعاملة في الخزينة ومزامنة المخزون!`
-        : `✓ Receipt changes updated in-place successfully, preventing duplication, and committed to ledger!`,
+        ? isCurrentlyOnline
+          ? `✓ تم حفظ وتحديث الإيصال بنجاح وتأكيد المعاملة في الخزينة ومزامنة المخزون!`
+          : `⚠️ تم حفظ الإيصال محلياً بنجاح (وضع أوفلاين) - وسيتماثل تلقائياً مع السيرفر فور استعادة النت!`
+        : isCurrentlyOnline
+          ? `✓ Receipt changes saved and committed to ledger!`
+          : `⚠️ Receipt saved locally offline! Will automatically sync when internet returns.`,
     );
     setTimeout(() => setSaveSuccessMessage(null), 4000);
 
@@ -2966,11 +3071,58 @@ export default function App() {
     setLoginError("❌ اسم المستخدم أو رمز المرور غير صحيح!");
   };
 
+  // Visible history records filtered by logged-in receptionist shift / account
+  const visibleHistory = useMemo(() => {
+    if (currentUser?.role === "RECEPTION") {
+      const activeUserKey = (currentUser.username || currentUser.email || "").trim().toLowerCase();
+      if (!activeUserKey) return [];
+
+      return history.filter((inv) => {
+        const officerKey = (inv.billing_officer_email || "").trim().toLowerCase();
+        if (!officerKey) return true;
+
+        if (officerKey === activeUserKey) return true;
+        const userPrefix = activeUserKey.split("@")[0];
+        const officerPrefix = officerKey.split("@")[0];
+        if (userPrefix === officerPrefix) return true;
+
+        return false;
+      });
+    }
+    // Super admin sees all history records across all shifts
+    return history;
+  }, [history, currentUser]);
+
+  const getTodayDateString = () => {
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  };
+
+  const [historyStartDate, setHistoryStartDate] = useState<string>(getTodayDateString());
+  const [historyEndDate, setHistoryEndDate] = useState<string>(getTodayDateString());
+
+  // Count of invoices created on the selected date range/day for the current user view
+  const activeDateReceiptsCount = useMemo(() => {
+    return visibleHistory.filter((inv) => {
+      if (!inv.created_at) return false;
+      const invDate = new Date(inv.created_at);
+      if (isNaN(invDate.getTime())) return false;
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const dateStr = `${invDate.getFullYear()}-${pad(invDate.getMonth() + 1)}-${pad(invDate.getDate())}`;
+
+      if (historyStartDate && dateStr < historyStartDate) return false;
+      if (historyEndDate && dateStr > historyEndDate) return false;
+
+      return true;
+    }).length;
+  }, [visibleHistory, historyStartDate, historyEndDate]);
+
   // BI reporting metrics calculated dynamically from history log
   const calculatedBIMetrics = useMemo(() => {
-    const cashTotal = history.reduce((sum, item) => sum + item.grand_total, 0);
+    const cashTotal = visibleHistory.reduce((sum, item) => sum + item.grand_total, 0);
     const uniquePatientsCount = new Set(
-      history.map((it) => it.patient_name.trim().toLowerCase()),
+      visibleHistory.map((it) => it.patient_name.trim().toLowerCase()),
     ).size;
 
     // Aggregate items sold
@@ -2978,7 +3130,7 @@ export default function App() {
       string,
       { name_ar: string; name_en: string; qty: number }
     > = {};
-    history.forEach((receipt) => {
+    visibleHistory.forEach((receipt) => {
       receipt.invoice_lines.forEach((line) => {
         if (!supplyUsageRecord[line.item_id]) {
           supplyUsageRecord[line.item_id] = {
@@ -3001,7 +3153,7 @@ export default function App() {
       patientCount: uniquePatientsCount,
       topSupplies: sortedUsage,
     };
-  }, [history]);
+  }, [visibleHistory]);
 
   if (!currentUser) {
     return (
@@ -3009,7 +3161,15 @@ export default function App() {
         dir={lang === "ar" ? "rtl" : "ltr"}
         className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans selection:bg-sky-150"
       >
-        <main className="w-full max-w-[420px] bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden relative p-8">
+        <NetworkSyncBar
+          currentLang={lang}
+          isOnline={isOnline}
+          pendingCount={pendingSyncCount}
+          isSyncing={isSyncingPending}
+          syncSuccessMessage={syncSuccessMessage}
+          onManualSync={triggerAutoSync}
+        />
+        <main className="w-full max-w-[420px] bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden relative p-8 mt-4">
           {/* Circular Glossy Logo Header (Exactly matches Screenshot 3) */}
           <div className="flex flex-col items-center mb-8">
             <div className="w-[100px] h-[100px] rounded-full bg-[#d5f2ff] ring-4 ring-[#bbf7d0] flex items-center justify-center shadow-xs transition-transform duration-500 hover:scale-[1.03]">
@@ -3413,6 +3573,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans selection:bg-sky-150">
+      <NetworkSyncBar
+        currentLang={lang}
+        isOnline={isOnline}
+        pendingCount={pendingSyncCount}
+        isSyncing={isSyncingPending}
+        syncSuccessMessage={syncSuccessMessage}
+        onManualSync={triggerAutoSync}
+      />
       <HospitalHeader
         currentLang={lang}
         onLanguageChange={setLang}
@@ -3504,7 +3672,7 @@ export default function App() {
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${
                   activePage === "ARCHIVE" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700 border border-slate-200"
                 }`}>
-                  {history.length}
+                  {activeDateReceiptsCount}
                 </span>
               </button>
 
@@ -3675,7 +3843,7 @@ export default function App() {
               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 ${
                 activePage === "ARCHIVE" ? "bg-white text-slate-800" : "bg-slate-200 text-slate-700"
               }`}>
-                {history.length}
+                {activeDateReceiptsCount}
               </span>
             </button>
 
@@ -5566,7 +5734,7 @@ export default function App() {
                 </div>
               </div>
             ) : activePage === "CONSUMPTION" ? (
-              <DailyConsumptionReport lang={lang} history={history} />
+              <DailyConsumptionReport lang={lang} history={visibleHistory} />
             ) : (
               <div className="flex flex-col gap-4">
                 <div className="p-4 bg-sky-50 border border-thin border-sky-100/70 rounded-xl flex flex-col md:flex-row items-center justify-between gap-3 shadow-3xs">
@@ -5598,7 +5766,7 @@ export default function App() {
 
                 <SuitesHistory
                   currentLang={lang}
-                  history={history}
+                  history={visibleHistory}
                   onReload={handleOpenInPlaceInvoiceEditor}
                   onDelete={handleDeleteFromHistory}
                   onPrint={handlePrintFromHistory}
@@ -5610,6 +5778,10 @@ export default function App() {
                     setActivePage("DETAIL");
                   }}
                   onPrintBatch={handlePrintBatchInvoices}
+                  startDate={historyStartDate}
+                  onStartDateChange={setHistoryStartDate}
+                  endDate={historyEndDate}
+                  onEndDateChange={setHistoryEndDate}
                 />
               </div>
             )
