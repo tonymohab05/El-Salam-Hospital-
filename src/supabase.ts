@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { MedicalItem, InvoicePayload, RestockInvoice, ReceptionOperator } from "./types";
+import { MedicalItem, InvoicePayload, RestockInvoice, ReceptionOperator, sanitizeInvoiceLines } from "./types";
 
 const supabaseUrl =
   (import.meta as any).env.VITE_SUPABASE_URL ||
@@ -255,23 +255,32 @@ export async function fetchSupabasePatientInvoices(): Promise<InvoicePayload[] |
     }
 
     return invoices.map((inv) => {
-      const matchingLines = lines
-        .filter((l) => l.invoice_id === inv.id || l.invoice_id === inv.receipt_number)
-        .map((l) => ({
-          item_id: String(l.item_id || ""),
-          item_name: l.item_name_ar || l.item_name_en || l.item_name || "",
-          item_name_ar: l.item_name_ar || "",
-          item_name_en: l.item_name_en || "",
-          unit_price: Number(l.unit_price || 0),
-          quantity: Number(l.quantity || 0),
-          line_total: Number(l.line_total || 0),
-        }));
+      // Prioritize matching lines by inv.id (UUID) to avoid combining lines from old/duplicate saves
+      let invLines = lines.filter((l) => String(l.invoice_id) === String(inv.id));
+      if (invLines.length === 0 && inv.receipt_number) {
+        invLines = lines.filter((l) => String(l.invoice_id) === String(inv.receipt_number));
+      }
+
+      const rawLines = invLines.map((l) => ({
+        item_id: String(l.item_id || ""),
+        item_name: l.item_name_ar || l.item_name_en || l.item_name || "",
+        item_name_ar: l.item_name_ar || "",
+        item_name_en: l.item_name_en || "",
+        unit_price: Number(l.unit_price || 0),
+        quantity: Number(l.quantity || 0),
+        line_total: Number(l.line_total || 0),
+      }));
+
+      const grandTotalNum = Number(inv.grand_total || 0);
+      const cleanLines = sanitizeInvoiceLines(rawLines, grandTotalNum);
+      const computedGrandTotal = grandTotalNum > 0 ? grandTotalNum : cleanLines.reduce((s, l) => s + l.line_total, 0);
 
       return {
+        id: inv.id,
         patient_name: inv.patient_name || "",
         receipt_number: inv.receipt_number || String(inv.id || ""),
-        invoice_lines: matchingLines,
-        grand_total: Number(inv.grand_total || 0),
+        invoice_lines: cleanLines,
+        grand_total: computedGrandTotal,
         billing_officer_email: inv.billing_officer_account || inv.billing_officer_email || "",
         hospital_branch_ar: "مستشفى السلام - قسم الطوارئ",
         hospital_branch_en: "El Salam Hospital - ER",
@@ -286,7 +295,7 @@ export async function fetchSupabasePatientInvoices(): Promise<InvoicePayload[] |
 }
 
 /**
- * Save new patient_invoice to Supabase
+ * Save new or updated patient_invoice to Supabase
  */
 export async function insertSupabasePatientInvoice(invoice: InvoicePayload): Promise<boolean> {
   if (!isSupabaseConfigured) {
@@ -296,18 +305,29 @@ export async function insertSupabasePatientInvoice(invoice: InvoicePayload): Pro
   try {
     console.log("💾 Saving patient invoice to Supabase:", invoice.receipt_number);
 
-    // 1. Check if receipt_number already exists to update instead of duplicate
-    const { data: existing, error: checkErr } = await supabase
-      .from("patient_invoices")
-      .select("id")
-      .eq("receipt_number", invoice.receipt_number)
-      .maybeSingle();
+    // 1. Check if invoice exists by id or receipt_number
+    let existing: { id: string; receipt_number: string } | null = null;
 
-    if (checkErr) {
-      console.warn("Notice checking existing invoice in Supabase:", checkErr.message);
+    if (invoice.id) {
+      const { data: byId } = await supabase
+        .from("patient_invoices")
+        .select("id, receipt_number")
+        .eq("id", invoice.id)
+        .maybeSingle();
+      if (byId) existing = byId;
     }
 
-    const invoiceUuid = existing ? existing.id : crypto.randomUUID();
+    if (!existing && invoice.receipt_number) {
+      const { data: byReceipt } = await supabase
+        .from("patient_invoices")
+        .select("id, receipt_number")
+        .eq("receipt_number", invoice.receipt_number)
+        .maybeSingle();
+      if (byReceipt) existing = byReceipt;
+    }
+
+    const invoiceUuid = existing ? existing.id : (invoice.id || crypto.randomUUID());
+    const oldReceiptNumber = existing ? existing.receipt_number : null;
     const officerAcc =
       (invoice.billing_officer_email && String(invoice.billing_officer_email).trim()) ||
       "admin";
@@ -342,11 +362,14 @@ export async function insertSupabasePatientInvoice(invoice: InvoicePayload): Pro
         invError = retryAltUpd;
       }
 
-      // Remove old detail lines to re-insert fresh updated lines
-      await supabase
-        .from("patient_invoice_lines")
-        .delete()
-        .eq("invoice_id", invoiceUuid);
+      // Remove old detail lines by UUID AND old/new receipt_numbers to re-insert fresh updated lines
+      await supabase.from("patient_invoice_lines").delete().eq("invoice_id", invoiceUuid);
+      if (invoice.receipt_number && invoice.receipt_number !== invoiceUuid) {
+        await supabase.from("patient_invoice_lines").delete().eq("invoice_id", invoice.receipt_number);
+      }
+      if (oldReceiptNumber && oldReceiptNumber !== invoiceUuid && oldReceiptNumber !== invoice.receipt_number) {
+        await supabase.from("patient_invoice_lines").delete().eq("invoice_id", oldReceiptNumber);
+      }
     } else {
       // Insert new record
       let { error: insErr } = await supabase
@@ -379,8 +402,9 @@ export async function insertSupabasePatientInvoice(invoice: InvoicePayload): Pro
     }
 
     // 2. Insert Invoice detail lines using invoiceUuid
-    if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
-      const linesToInsert = invoice.invoice_lines.map((line) => ({
+    const sanitizedLines = sanitizeInvoiceLines(invoice.invoice_lines || [], invoice.grand_total);
+    if (sanitizedLines && sanitizedLines.length > 0) {
+      const linesToInsert = sanitizedLines.map((line) => ({
         invoice_id: invoiceUuid,
         item_id: line.item_id || null,
         item_name_ar: line.item_name_ar || line.item_name || "",
@@ -395,7 +419,7 @@ export async function insertSupabasePatientInvoice(invoice: InvoicePayload): Pro
 
       if (linesError) {
         console.warn("Primary lines insert failed, trying fallback without item_id FK:", linesError.message);
-        const fallbackLines = invoice.invoice_lines.map((line) => ({
+        const fallbackLines = sanitizedLines.map((line) => ({
           invoice_id: invoiceUuid,
           item_name_ar: line.item_name_ar || line.item_name || "",
           unit_price: Number(line.unit_price || 0),

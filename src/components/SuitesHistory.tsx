@@ -1,7 +1,7 @@
 import React from "react";
 import { History, Search, ArrowUpRight, Trash2, Calendar, ShoppingBag, Database, FileText, Pencil, Printer, Download, FileDown, FileSpreadsheet, SlidersHorizontal, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight } from "lucide-react";
 import * as XLSX from "xlsx";
-import { InvoicePayload, Language } from "../types";
+import { InvoicePayload, Language, sanitizeInvoiceLines } from "../types";
 import { formatCurrency, getUserName } from "../utils";
 
 interface SuitesHistoryProps {
@@ -98,14 +98,15 @@ export default function SuitesHistory({
       ];
 
       targets.forEach((record, index) => {
-        const itemsDetail = record.invoice_lines
+        const cleanLines = sanitizeInvoiceLines(record.invoice_lines, record.grand_total);
+        const itemsDetail = cleanLines
           .map(
             (l) =>
               `${l.item_name_ar || l.item_name_en} (${l.unit_price} ج.م × ${l.quantity} = ${l.line_total} ج.م)`
           )
           .join(" | ");
 
-        const totalQty = record.invoice_lines.reduce((s, l) => s + l.quantity, 0);
+        const totalQty = cleanLines.reduce((s, l) => s + l.quantity, 0);
 
         const formattedDate = record.created_at
           ? new Date(record.created_at).toLocaleString("ar-EG")
@@ -168,7 +169,8 @@ export default function SuitesHistory({
           : "غير محدد";
         const officerName = getUserName(record.billing_officer_email, currentLang) || record.billing_officer_email || "-";
 
-        record.invoice_lines.forEach((line) => {
+        const cleanLines = sanitizeInvoiceLines(record.invoice_lines, record.grand_total);
+        cleanLines.forEach((line) => {
           const alternatingLabel = rowIdx % 2 === 0 ? "صف مضلل (رمادي فاتح)" : "صف عادي (أبيض)";
           itemizedAOA.push([
             rowIdx++,
@@ -894,7 +896,8 @@ export default function SuitesHistory({
                   (h) => h.receipt_number === invoice.receipt_number && h.created_at === invoice.created_at
                 );
 
-                const linesSummary = invoice.invoice_lines
+                const sanitizedLines = sanitizeInvoiceLines(invoice.invoice_lines, invoice.grand_total);
+                const linesSummary = sanitizedLines
                   .map((li) => `${li.quantity}x ${currentLang === "ar" ? li.item_name_ar : li.item_name_en}`)
                   .join(" ، ");
 

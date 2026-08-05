@@ -55,6 +55,7 @@ import {
   HOSPITAL_INVENTORY,
   RestockInvoice,
   RestockInvoiceItem,
+  sanitizeInvoiceLines,
 } from "./types";
 
 import {
@@ -499,6 +500,7 @@ export default function App() {
   // In-Place Invoice Editor modal state
   const [editingInvoiceIndex, setEditingInvoiceIndex] = useState<number | null>(null);
   const [editingInvoicePatientName, setEditingInvoicePatientName] = useState<string>("");
+  const [editingInvoiceReceiptNumber, setEditingInvoiceReceiptNumber] = useState<string>("");
   const [editingInvoiceLines, setEditingInvoiceLines] = useState<InvoiceLine[]>([]);
   const [editingInvoiceSearchQuery, setEditingInvoiceSearchQuery] = useState<string>("");
   const [editingSelectedNewItem, setEditingSelectedNewItem] = useState<MedicalItem | null>(null);
@@ -1154,7 +1156,14 @@ export default function App() {
     const cachedLedger = localStorage.getItem("cairo_er_ledger_history_v1");
     if (cachedLedger) {
       try {
-        setHistory(JSON.parse(cachedLedger));
+        const rawHistory: InvoicePayload[] = JSON.parse(cachedLedger);
+        if (Array.isArray(rawHistory)) {
+          const cleanHistory = rawHistory.map((inv) => ({
+            ...inv,
+            invoice_lines: sanitizeInvoiceLines(inv.invoice_lines, inv.grand_total),
+          }));
+          setHistory(cleanHistory);
+        }
       } catch (e) {
         console.error("Local storage log parse error:", e);
       }
@@ -1178,10 +1187,14 @@ export default function App() {
 
   // Update localStorage when logs modify
   const saveHistoryToCache = (newHistory: InvoicePayload[]) => {
-    setHistory(newHistory);
+    const cleanHistory = newHistory.map((inv) => ({
+      ...inv,
+      invoice_lines: sanitizeInvoiceLines(inv.invoice_lines, inv.grand_total),
+    }));
+    setHistory(cleanHistory);
     localStorage.setItem(
       "cairo_er_ledger_history_v1",
-      JSON.stringify(newHistory),
+      JSON.stringify(cleanHistory),
     );
 
     if (isSupabaseConfigured) {
@@ -1623,10 +1636,11 @@ export default function App() {
 
   // Build ready payload object
   const supabasePayload: InvoicePayload = useMemo(() => {
+    const cleanLines = sanitizeInvoiceLines(invoiceLines);
     return {
       patient_name: patientName.trim(),
       receipt_number: receiptNumber.trim(),
-      invoice_lines: invoiceLines.map((line) => ({
+      invoice_lines: cleanLines.map((line) => ({
         item_id: line.item_id,
         item_name: lang === "ar" ? line.item_name_ar : line.item_name_en,
         item_name_ar: line.item_name_ar,
@@ -1635,7 +1649,7 @@ export default function App() {
         quantity: line.quantity,
         line_total: line.line_total,
       })),
-      grand_total: calculatedTotals,
+      grand_total: roundPrice(cleanLines.reduce((acc, l) => acc + l.line_total, 0)),
       billing_officer_email: currentUser?.username || currentUser?.email || "admin",
       hospital_branch_ar: "مستشفى السلام - 76 احمد عصمت عين شمس",
       hospital_branch_en: "El-Salam Hospital - 76 Ahmed Esmat, Ain Shams",
@@ -2351,7 +2365,9 @@ export default function App() {
     if (!record) return;
     setEditingInvoiceIndex(idx);
     setEditingInvoicePatientName(record.patient_name);
-    setEditingInvoiceLines(record.invoice_lines.map((l) => ({ ...l })));
+    setEditingInvoiceReceiptNumber(record.receipt_number || "");
+    const cleanLines = sanitizeInvoiceLines(record.invoice_lines, record.grand_total);
+    setEditingInvoiceLines(cleanLines.map((l) => ({ ...l })));
     setEditingInvoiceSearchQuery("");
     setEditingSelectedNewItem(null);
     setEditingNewItemQty(1);
@@ -2475,12 +2491,14 @@ export default function App() {
       return;
     }
 
-    const newGrandTotal = editingInvoiceLines.reduce((acc, l) => acc + l.line_total, 0);
+    const cleanEditingLines = sanitizeInvoiceLines(editingInvoiceLines);
+    const newGrandTotal = cleanEditingLines.reduce((acc, l) => acc + l.line_total, 0);
 
     const updatedRecord: InvoicePayload = {
       ...originalRecord,
       patient_name: editingInvoicePatientName.trim() || originalRecord.patient_name,
-      invoice_lines: editingInvoiceLines,
+      receipt_number: editingInvoiceReceiptNumber.trim() || originalRecord.receipt_number,
+      invoice_lines: cleanEditingLines,
       grand_total: newGrandTotal,
     };
 
@@ -2520,7 +2538,8 @@ export default function App() {
       setPatientName(record.patient_name);
       setReceiptNumber(record.receipt_number);
 
-      const lines: InvoiceLine[] = record.invoice_lines.map((li) => ({
+      const cleanLines = sanitizeInvoiceLines(record.invoice_lines, record.grand_total);
+      const lines: InvoiceLine[] = cleanLines.map((li) => ({
         item_id: li.item_id,
         item_name: lang === "ar" ? li.item_name_ar : li.item_name_en,
         item_name_ar: li.item_name_ar,
@@ -3261,8 +3280,8 @@ export default function App() {
                   </h3>
                   <p className="text-[11px] text-sky-100 font-mono mt-0.5">
                     {lang === "ar"
-                      ? `رقم الإيصال: #${history[editingInvoiceIndex].receipt_number}`
-                      : `Receipt Ref: #${history[editingInvoiceIndex].receipt_number}`}
+                      ? `رقم الإيصال: #${editingInvoiceReceiptNumber || history[editingInvoiceIndex].receipt_number}`
+                      : `Receipt Ref: #${editingInvoiceReceiptNumber || history[editingInvoiceIndex].receipt_number}`}
                   </p>
                 </div>
               </div>
@@ -3278,7 +3297,7 @@ export default function App() {
             {/* Modal Body */}
             <div className="p-4 md:p-6 space-y-5 max-h-[75vh] overflow-y-auto">
               {/* Patient Name & Ref Details */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     {lang === "ar" ? "اسم المريض / الحضور:" : "Patient Name:"}
@@ -3289,6 +3308,18 @@ export default function App() {
                     onChange={(e) => setEditingInvoicePatientName(e.target.value)}
                     className="w-full bg-white border border-slate-300 focus:border-hospital-blue focus:ring-1 focus:ring-hospital-blue rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800"
                     placeholder={lang === "ar" ? "أدخل اسم المريض..." : "Enter patient name..."}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {lang === "ar" ? "رقم الإيصال / المرجع:" : "Receipt / Ref Number:"}
+                  </label>
+                  <input
+                    type="text"
+                    value={editingInvoiceReceiptNumber}
+                    onChange={(e) => setEditingInvoiceReceiptNumber(e.target.value)}
+                    className="w-full bg-white border border-slate-300 focus:border-hospital-blue focus:ring-1 focus:ring-hospital-blue rounded-lg px-3 py-1.5 text-xs font-bold font-mono text-slate-800"
+                    placeholder={lang === "ar" ? "أدخل رقم الإيصال..." : "Enter receipt number..."}
                   />
                 </div>
                 <div className="flex flex-col md:items-end text-xs space-y-1 text-slate-500 font-mono">
@@ -7517,30 +7548,32 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-250">
-                    {(tempPrintRecord
-                      ? tempPrintRecord.invoice_lines
-                      : invoiceLines
-                    ).map((line, index) => (
-                      <tr key={`${line.item_id}-${index}`} className="text-slate-800">
-                        <td className="py-2 px-3 text-right border-r border-slate-250 font-mono">
-                          {index + 1}
-                        </td>
-                        <td className="py-2 px-3 text-right border-r border-slate-250 font-arabic font-bold">
-                          {lang === "ar"
-                            ? line.item_name_ar
-                            : line.item_name_en}
-                        </td>
-                        <td className="py-2 px-3 text-center border-r border-slate-250 font-mono font-bold text-slate-700">
-                          {formatCurrency(line.unit_price, lang)}
-                        </td>
-                        <td className="py-2 px-3 text-center border-r border-slate-250 font-bold font-mono">
-                          {formatArabicDigits(line.quantity, lang)}
-                        </td>
-                        <td className="py-2 px-3 text-left font-bold font-mono select-all text-slate-900">
-                          {formatCurrency(line.line_total, lang)}
-                        </td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const rawLines = tempPrintRecord ? tempPrintRecord.invoice_lines : invoiceLines;
+                      const targetTotal = tempPrintRecord ? tempPrintRecord.grand_total : undefined;
+                      const displayLines = sanitizeInvoiceLines(rawLines, targetTotal);
+                      return displayLines.map((line, index) => (
+                        <tr key={`${line.item_id}-${index}`} className="text-slate-800">
+                          <td className="py-2 px-3 text-right border-r border-slate-250 font-mono">
+                            {index + 1}
+                          </td>
+                          <td className="py-2 px-3 text-right border-r border-slate-250 font-arabic font-bold">
+                            {lang === "ar"
+                              ? line.item_name_ar
+                              : line.item_name_en}
+                          </td>
+                          <td className="py-2 px-3 text-center border-r border-slate-250 font-mono font-bold text-slate-700">
+                            {formatCurrency(line.unit_price, lang)}
+                          </td>
+                          <td className="py-2 px-3 text-center border-r border-slate-250 font-bold font-mono">
+                            {formatArabicDigits(line.quantity, lang)}
+                          </td>
+                          <td className="py-2 px-3 text-left font-bold font-mono select-all text-slate-900">
+                            {formatCurrency(line.line_total, lang)}
+                          </td>
+                        </tr>
+                      ));
+                    })()}
                     {/* Grand Total Row inside table for professional financial finish */}
                     <tr className="bg-slate-50/90 font-black border-t-2 border-slate-400">
                       <td
@@ -7553,9 +7586,9 @@ export default function App() {
                       </td>
                       <td className="py-3 px-3 text-center border-r border-slate-300 font-mono text-xs">
                         {formatArabicDigits(
-                          (tempPrintRecord
-                            ? tempPrintRecord.invoice_lines
-                            : invoiceLines
+                          sanitizeInvoiceLines(
+                            tempPrintRecord ? tempPrintRecord.invoice_lines : invoiceLines,
+                            tempPrintRecord ? tempPrintRecord.grand_total : undefined
                           ).reduce((acc, l) => acc + l.quantity, 0),
                           lang,
                         )}
@@ -7744,7 +7777,7 @@ export default function App() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-250">
-                            {invoice.invoice_lines.map((line, index) => (
+                            {sanitizeInvoiceLines(invoice.invoice_lines, invoice.grand_total).map((line, index) => (
                               <tr
                                 key={line.item_id + "-" + index}
                                 className="text-slate-800"
