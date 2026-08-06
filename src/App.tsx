@@ -3884,91 +3884,102 @@ export default function App() {
         <div className="flex-1 w-full min-w-0 flex flex-col gap-4" dir={lang === "ar" ? "rtl" : "ltr"}>
           {activePage === "PRODUCT_DETAIL" ? (
             <div className="mx-auto w-full max-w-6xl space-y-6 text-right animate-fadeIn" dir="rtl">
-              {/* Navigation Header */}
-              <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-2xl">📊</span>
+              {/* Navigation Header Header Banner matching Screenshot */}
+              <div className="bg-[#0b132b] text-white rounded-2xl p-5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                {/* Right side in RTL: Icon + Title & Subtitle */}
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 text-xl shadow-inner">
+                    📊
+                  </div>
                   <div>
-                    <h2 className="text-sm font-black font-arabic">
+                    <h2 className="text-base sm:text-lg font-black font-arabic text-white">
                       {lang === "ar" ? "تفاصيل الصنف الطبي الكلية وسجل الشحنات" : "Supply Product Details & Batches"}
                     </h2>
-                    <p className="text-[10px] text-slate-400 font-arabic mt-0.5">
+                    <p className="text-xs text-slate-300 font-arabic mt-0.5 leading-snug">
                       {lang === "ar"
                         ? "استعراض وتعديل كود الصنف واسمه، أرصدة المخازن، والاطلاع على شحنات التوريد التفصيلية وتواريخ صلاحيتها لكل شحنة"
                         : "Review and edit core specs, current live balances, security limits, and delivery lot logs."}
                     </p>
                   </div>
                 </div>
+
+                {/* Left side in RTL: Red Pill Button */}
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedProductId(null);
                     setActivePage("ADMIN");
                   }}
-                  className="bg-rose-700 hover:bg-rose-800 text-white font-extrabold px-3.5 py-2 rounded-xl text-xs transition-colors font-arabic flex items-center justify-center gap-1.5 cursor-pointer border border-rose-650 shadow-sm self-start sm:self-auto"
+                  className="bg-[#be123c] hover:bg-[#9f1239] text-white font-black px-6 py-2.5 rounded-full text-sm transition-all font-arabic flex items-center justify-center gap-2 cursor-pointer shadow-sm border border-rose-500/40 self-start sm:self-auto shrink-0 active:scale-95"
                 >
-                  <ArrowRight className="w-4 h-4" />
-                  <span>{lang === "ar" ? "← العودة لبيانات المخزن" : "Back to Stock Area"}</span>
+                  <span className="text-base">➔</span>
+                  <span>{lang === "ar" ? "العودة لبيانات المخزن" : "Back to Stock Area"}</span>
                 </button>
               </div>
 
               {/* Stacked content: Core Specifications on top, Shipments table below */}
               <div className="flex flex-col gap-6 text-right">
-                {/* Core Specifications Form */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-                  <div className="border-b border-slate-150 pb-3">
-                    <h3 className="text-xs font-black text-slate-800 font-arabic flex items-center gap-1.5">
-                      <span>✏️</span> {lang === "ar" ? "تعديل بيانات المواصفات الأساسية" : "Edit Basic Product Details"}
+                {/* Core Specifications Form Card matching Screenshot */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
+                  {/* Title and line */}
+                  <div className="border-b border-slate-300/80 pb-3 flex items-center justify-end">
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 font-arabic flex items-center gap-2">
+                      <span>تعديل بيانات المواصفات الأساسية</span>
+                      <span className="text-amber-600 text-lg">✏️</span>
                     </h3>
                   </div>
 
-                  <div className="space-y-3 text-right">
-                    {/* Item ID */}
-                    <div>
-                      <label className="block text-[10.5px] font-black text-slate-705 mb-1 font-arabic text-right">
-                        كود الصنف الطبي (ID):
-                      </label>
-                      <input
-                        type="text"
-                        value={detailId}
-                        onChange={(e) => setDetailId(e.target.value)}
-                        className="w-full text-xs font-mono p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white"
-                        dir="ltr"
-                      />
-                    </div>
-
-                    {/* Arabic Description */}
-                    <div>
-                      <label className="block text-[10.5px] font-black text-slate-705 mb-1 font-arabic text-right">
-                        الوصف بالعربية:
-                      </label>
-                      <input
-                        type="text"
-                        value={detailNameAr}
-                        onChange={(e) => setDetailNameAr(e.target.value)}
-                        className="w-full text-xs font-arabic p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-right font-bold"
-                        dir="rtl"
-                      />
-                    </div>
-
-                    {/* English Description */}
-                    <div>
-                      <label className="block text-[10.5px] font-black text-slate-705 mb-1 font-arabic text-right">
-                        الوصف بالإنجليزية:
-                      </label>
-                      <input
-                        type="text"
-                        value={detailNameEn}
-                        onChange={(e) => setDetailNameEn(e.target.value)}
-                        className="w-full text-xs font-sans p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-left font-bold"
-                        dir="ltr"
-                      />
-                    </div>
-
-                    {/* Categories Dropdown & Custom Fields */}
-                    <div className="grid grid-cols-1 gap-3 text-right">
+                  <div className="space-y-5 text-right">
+                    {/* Row 1: 3 Columns Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-right">
+                      {/* Item ID (Right column in RTL) */}
                       <div>
-                        <label className="block text-[11px] font-black text-slate-705 mb-1.5 font-arabic text-right">
+                        <label className="block text-xs font-extrabold text-slate-900 mb-2 font-arabic text-right">
+                          كود الصنف الطبي (ID):
+                        </label>
+                        <input
+                          type="text"
+                          value={detailId}
+                          onChange={(e) => setDetailId(e.target.value)}
+                          className="w-full text-sm font-bold font-mono p-2.5 sm:p-3 border border-slate-300 rounded-xl outline-none focus:border-sky-500 bg-white text-center text-slate-800 shadow-3xs"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      {/* Arabic Description (Middle column in RTL) */}
+                      <div>
+                        <label className="block text-xs font-extrabold text-slate-900 mb-2 font-arabic text-right">
+                          الوصف بالعربية:
+                        </label>
+                        <input
+                          type="text"
+                          value={detailNameAr}
+                          onChange={(e) => setDetailNameAr(e.target.value)}
+                          className="w-full text-sm font-bold font-arabic p-2.5 sm:p-3 border border-slate-300 rounded-xl outline-none focus:border-sky-500 bg-white text-center text-slate-900 shadow-3xs"
+                          dir="rtl"
+                        />
+                      </div>
+
+                      {/* English Description (Left column in RTL) */}
+                      <div>
+                        <label className="block text-xs font-extrabold text-slate-900 mb-2 font-arabic text-right">
+                          الوصف بالإنجليزية:
+                        </label>
+                        <input
+                          type="text"
+                          value={detailNameEn}
+                          onChange={(e) => setDetailNameEn(e.target.value)}
+                          className="w-full text-sm font-bold font-sans p-2.5 sm:p-3 border border-slate-300 rounded-xl outline-none focus:border-sky-500 bg-white text-center text-slate-900 shadow-3xs"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 2: 3 Columns Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-right">
+                      {/* Category Dropdown (Right column in RTL) */}
+                      <div>
+                        <label className="block text-xs font-extrabold text-slate-900 mb-2 font-arabic text-right">
                           📁 {lang === "ar" ? "القسم / الفئة الطبية:" : "Department / Medical Category:"}
                         </label>
                         <select
@@ -3988,7 +3999,7 @@ export default function App() {
                               }
                             }
                           }}
-                          className="w-full text-xs font-arabic p-2.5 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-right font-bold text-slate-800"
+                          className="w-full text-sm font-bold font-arabic p-2.5 sm:p-3 border border-slate-300 rounded-xl outline-none focus:border-sky-500 bg-white text-center text-slate-900 shadow-3xs cursor-pointer"
                           dir="rtl"
                         >
                           <option value="">-- {lang === "ar" ? "اختر فئة من المجموعة" : "Choose a Category"} --</option>
@@ -4002,54 +4013,23 @@ export default function App() {
                           </option>
                         </select>
                       </div>
-                    </div>
 
-                    {isCustomCategoryInEdit && (
-                      <div className="grid grid-cols-2 gap-3 text-right p-3 bg-sky-50/30 border border-sky-100 rounded-lg animate-fadeIn">
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-705 mb-1 font-arabic text-right">
-                            القسم الجديد (عربي):
-                          </label>
-                          <input
-                            type="text"
-                            value={detailCategoryAr}
-                            onChange={(e) => setDetailCategoryAr(e.target.value)}
-                            className="w-full text-[11px] font-arabic p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-right"
-                            placeholder="مثال: قسم الطوارئ"
-                            dir="rtl"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-705 mb-1 font-arabic text-left">
-                            New Category (EN):
-                          </label>
-                          <input
-                            type="text"
-                            value={detailCategoryEn}
-                            onChange={(e) => setDetailCategoryEn(e.target.value)}
-                            className="w-full text-[11px] font-sans p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-left"
-                            placeholder="e.g. ER Department"
-                            dir="ltr"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Inventory metrics dual column */}
-                    <div className="grid grid-cols-2 gap-3 text-right">
+                      {/* Live Stock Total (Middle column in RTL) */}
                       <div>
-                        <label className="block text-[10px] font-black text-slate-705 mb-1 font-arabic text-right">
+                        <label className="block text-xs font-extrabold text-slate-900 mb-2 font-arabic text-right">
                           الرصيد المتاح الكلي:
                         </label>
                         <input
                           type="number"
                           value={detailStock}
                           onChange={(e) => setDetailStock(e.target.value === "" ? "" : Number(e.target.value))}
-                          className="w-full text-xs font-mono p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-center font-bold text-slate-900"
+                          className="w-full text-sm font-bold font-mono p-2.5 sm:p-3 border border-slate-300 rounded-xl outline-none focus:border-sky-500 bg-white text-center text-slate-900 shadow-3xs"
                         />
                       </div>
+
+                      {/* Default Unit Price (Left column in RTL) */}
                       <div>
-                        <label className="block text-[10px] font-black text-slate-705 mb-1 font-arabic text-right">
+                        <label className="block text-xs font-extrabold text-slate-900 mb-2 font-arabic text-right">
                           السعر الافتراضي (جنيه):
                         </label>
                         <input
@@ -4057,45 +4037,83 @@ export default function App() {
                           step="0.1"
                           value={detailUnitPrice}
                           onChange={(e) => setDetailUnitPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                          className="w-full text-xs font-mono p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-center font-bold text-sky-700"
+                          className="w-full text-sm font-bold font-mono p-2.5 sm:p-3 border border-slate-300 rounded-xl outline-none focus:border-sky-500 bg-white text-center text-sky-700 shadow-3xs"
                         />
                       </div>
                     </div>
 
-                    {/* Threshold & Expiry */}
-                    <div className="grid grid-cols-2 gap-3 text-right">
+                    {isCustomCategoryInEdit && (
+                      <div className="grid grid-cols-2 gap-4 text-right p-4 bg-sky-50/40 border border-sky-200 rounded-xl animate-fadeIn">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-800 mb-1.5 font-arabic text-right">
+                            القسم الجديد (عربي):
+                          </label>
+                          <input
+                            type="text"
+                            value={detailCategoryAr}
+                            onChange={(e) => setDetailCategoryAr(e.target.value)}
+                            className="w-full text-xs font-arabic p-2.5 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-right"
+                            placeholder="مثال: قسم الطوارئ"
+                            dir="rtl"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-800 mb-1.5 font-arabic text-left">
+                            New Category (EN):
+                          </label>
+                          <input
+                            type="text"
+                            value={detailCategoryEn}
+                            onChange={(e) => setDetailCategoryEn(e.target.value)}
+                            className="w-full text-xs font-sans p-2.5 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-left"
+                            placeholder="e.g. ER Department"
+                            dir="ltr"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Row 3: Threshold & Expiry Date (Aligned 3 columns) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-right">
+                      {/* Threshold (Right column in RTL) */}
                       <div>
-                        <label className="block text-[10px] font-black text-slate-705 mb-1 font-arabic text-right">
+                        <label className="block text-xs font-extrabold text-slate-900 mb-2 font-arabic text-right">
                           حد الأمان (Threshold):
                         </label>
                         <input
                           type="number"
                           value={detailThreshold}
                           onChange={(e) => setDetailThreshold(e.target.value === "" ? "" : Number(e.target.value))}
-                          className="w-full text-xs font-mono p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-center text-amber-700 font-bold"
+                          className="w-full text-sm font-bold font-mono p-2.5 sm:p-3 border border-slate-300 rounded-xl outline-none focus:border-sky-500 bg-white text-center text-amber-700 shadow-3xs"
                         />
                       </div>
+
+                      {/* Expiry Date (Middle column in RTL) */}
                       <div>
-                        <label className="block text-[10px] font-black text-slate-705 mb-1 font-arabic text-right">
+                        <label className="block text-xs font-extrabold text-slate-900 mb-2 font-arabic text-right">
                           تاريخ الصلاحية الكلي:
                         </label>
                         <input
                           type="date"
                           value={detailExpiryDate}
                           onChange={(e) => setDetailExpiryDate(e.target.value)}
-                          className="w-full text-xs font-mono p-2 border border-slate-300 rounded-lg outline-none focus:border-sky-500 bg-white text-center text-rose-700 font-bold"
+                          className="w-full text-sm font-bold font-mono p-2.5 sm:p-3 border border-slate-300 rounded-xl outline-none focus:border-sky-500 bg-white text-center text-rose-700 shadow-3xs"
                         />
                       </div>
+
+                      {/* Left Column Spacer */}
+                      <div className="hidden md:block"></div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
+                  {/* Actions Bar */}
+                  <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-slate-200/80">
                     {!saveConfirm && !deleteConfirm ? (
                       <>
                         <button
                           type="button"
                           onClick={() => handleSaveDetailedProduct(false)}
-                          className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-750 text-white rounded-xl font-bold font-arabic text-xs transition-all cursor-pointer shadow-3xs flex items-center justify-center gap-1.5 font-black"
+                          className="w-full sm:flex-1 py-3 px-6 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-black font-arabic text-sm transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
                         >
                           <span>✓</span> {lang === "ar" ? "حفظ التعديلات والمواصفات" : "Save Specifications"}
                         </button>
@@ -4105,43 +4123,43 @@ export default function App() {
                             setDeleteConfirm(true);
                             setSaveConfirm(false);
                           }}
-                          className="w-full py-2 px-4 bg-rose-50 hover:bg-rose-100/80 text-rose-700 border border-rose-250 rounded-xl font-bold font-arabic text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 font-black"
+                          className="w-full sm:w-auto py-3 px-5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-xl font-extrabold font-arabic text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2"
                         >
-                          <span>🗑️</span> {lang === "ar" ? "حذف الصنف نهائياً من المستودع" : "Permanently Delete Product"}
+                          <span>🗑️</span> {lang === "ar" ? "حذف الصنف نهائياً" : "Delete Product"}
                         </button>
                       </>
                     ) : saveConfirm ? (
-                      <div className="bg-emerald-50/70 border-2 border-emerald-500/50 rounded-2xl p-4 text-center space-y-3 shadow-sm transition-all animate-in fade-in zoom-in-95 duration-150">
-                        <p className="text-xs font-black text-emerald-950 font-arabic leading-relaxed">
+                      <div className="w-full bg-emerald-50/90 border-2 border-emerald-500/50 rounded-2xl p-4 text-center space-y-3 shadow-sm transition-all animate-in fade-in zoom-in-95 duration-150">
+                        <p className="text-xs sm:text-sm font-black text-emerald-950 font-arabic leading-relaxed">
                           {lang === "ar"
                             ? "⚠️ هل أنت متأكد من رغبتك في حفظ تعديلات ومواصفات هذا الصنف؟"
                             : "⚠️ Are you sure you want to save the basic specifications for this product?"}
                         </p>
-                        <div className="flex gap-2.5">
+                        <div className="flex justify-center gap-3">
                           <button
                             type="button"
                             onClick={() => handleSaveDetailedProduct(true)}
-                            className="flex-1 py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl font-arabic text-xs transition-colors shadow-sm cursor-pointer"
+                            className="py-2 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl font-arabic text-xs sm:text-sm transition-colors shadow-sm cursor-pointer"
                           >
-                            {lang === "ar" ? "نعم" : "Yes"}
+                            {lang === "ar" ? "نعم، احفظ الأن" : "Yes, Save Now"}
                           </button>
                           <button
                             type="button"
                             onClick={() => setSaveConfirm(false)}
-                            className="flex-1 py-2 px-4 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl font-arabic text-xs transition-colors shadow-sm cursor-pointer"
+                            className="py-2 px-6 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl font-arabic text-xs sm:text-sm transition-colors shadow-sm cursor-pointer"
                           >
                             {lang === "ar" ? "إلغاء وتراجع" : "Cancel"}
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-rose-50/70 border-2 border-rose-500/50 rounded-2xl p-4 text-center space-y-3 shadow-sm transition-all animate-in fade-in zoom-in-95 duration-150">
-                        <p className="text-xs font-black text-rose-950 font-arabic leading-relaxed">
+                      <div className="w-full bg-rose-50/90 border-2 border-rose-500/50 rounded-2xl p-4 text-center space-y-3 shadow-sm transition-all animate-in fade-in zoom-in-95 duration-150">
+                        <p className="text-xs sm:text-sm font-black text-rose-950 font-arabic leading-relaxed">
                           {lang === "ar"
                             ? "🚨 تحذير: هل أنت متأكد تماماً من رغبتك في حذف هذا الصنف بالكامل ونهائياً؟"
                             : "🚨 Warning: Are you sure you want to permanently delete this product and all its data?"}
                         </p>
-                        <div className="flex gap-2.5">
+                        <div className="flex justify-center gap-3">
                           <button
                             type="button"
                             onClick={() => {
@@ -6528,32 +6546,34 @@ export default function App() {
             // ==========================================
             <div className="space-y-6 text-right animate-fadeIn" dir="rtl">
               {/* Interactive Warning Widgets / Top Buttons (أزرار الاختيار العلوية) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:hidden">
-                {/* 1. Expiry Warnings Toggle Button Card */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:hidden" dir="rtl">
+                {/* 1. Expiry Warnings Toggle Button Card (Right Card in RTL) */}
                 <button
                   type="button"
                   onClick={() => setActiveAdminTab(activeAdminTab === "EXPIRIES" ? "MASTER" : "EXPIRIES")}
-                  className={`w-full text-right p-4 rounded-xl border transition-all flex items-start justify-between gap-4 cursor-pointer outline-none relative hover:scale-[1.01] active:scale-[0.99] duration-150 ${
+                  className={`w-full text-right p-4 rounded-2xl border transition-all flex items-start justify-between gap-4 cursor-pointer outline-none relative hover:scale-[1.005] active:scale-[0.995] duration-150 ${
                     activeAdminTab === "EXPIRIES"
-                      ? "bg-amber-100 border-amber-400 ring-2 ring-amber-400/30 shadow-md shadow-amber-500/10 text-amber-950 font-black"
-                      : "bg-amber-50/60 hover:bg-amber-50 border-amber-100 shadow-3xs text-slate-800"
+                      ? "bg-[#fefce8] border-2 border-[#eab308] shadow-sm text-amber-950 font-black"
+                      : "bg-[#fefce8]/60 hover:bg-[#fefce8] border border-amber-200/80 shadow-3xs text-slate-800"
                   }`}
                 >
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-black text-amber-950 font-arabic flex items-center gap-1.5 justify-start">
-                      <span className="text-base">📅</span>
-                      {lang === "ar" ? "تنبيهات وفترات صلاحية الأدوية والمستلزمات" : "Expiry Warnings & Shelf-life Alert"}
+                    <h3 className="text-sm sm:text-base font-black text-[#713f12] font-arabic flex items-center gap-1.5 justify-start">
+                      <span>📅</span>
+                      <span>{lang === "ar" ? "تنبيهات وفترات صلاحية الأدوية والمستلزمات" : "Expiry Warnings & Shelf-life Alert"}</span>
                     </h3>
-                    <p className={`text-[10.5px] font-arabic mt-1 leading-relaxed ${
-                      activeAdminTab === "EXPIRIES" ? "text-amber-900" : "text-amber-700/80"
+                    <p className={`text-[11px] font-arabic mt-1 leading-snug ${
+                      activeAdminTab === "EXPIRIES" ? "text-[#854d0e] font-semibold" : "text-amber-800/80"
                     }`}>
                       {lang === "ar"
                         ? "كشف تلقائي مستمر بالأصناف واللقاحات التي تنتهي صلاحيتها خلال 90 يوماً أو أقل لاتخاذ الإجراءات"
                         : "Ongoing automated track of supplies and vaccines expiring within 90 days."}
                     </p>
                     <div className="mt-2.5 flex items-center gap-1.5">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[9.5px] font-black font-arabic ${
-                        activeAdminTab === "EXPIRIES" ? "bg-amber-600 text-white animate-pulse" : "bg-amber-200/60 text-amber-850"
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-md text-[11px] font-black font-arabic ${
+                        activeAdminTab === "EXPIRIES"
+                          ? "bg-[#fef08a] text-[#713f12] shadow-3xs"
+                          : "bg-[#fef08a]/80 text-[#713f12] hover:bg-[#fef08a]"
                       }`}>
                         {activeAdminTab === "EXPIRIES"
                           ? (lang === "ar" ? "📍 يعرض هذه الصفحة حالياً" : "📍 Currently Displayed")
@@ -6563,36 +6583,38 @@ export default function App() {
                   </div>
                   
                   {/* Icon Container matching Screenshot 1 */}
-                  <div className="w-12 h-12 rounded-xl bg-white border border-amber-200 shadow-3xs flex items-center justify-center shrink-0">
+                  <div className="w-13 h-13 rounded-2xl bg-white border border-amber-200/80 shadow-2xs flex items-center justify-center shrink-0">
                     <span className="text-2xl">📅</span>
                   </div>
                 </button>
 
-                {/* 2. Shortages Warnings Toggle Button Card */}
+                {/* 2. Shortages Warnings Toggle Button Card (Left Card in RTL) */}
                 <button
                   type="button"
                   onClick={() => setActiveAdminTab(activeAdminTab === "SHORTAGES" ? "MASTER" : "SHORTAGES")}
-                  className={`w-full text-right p-4 rounded-xl border transition-all flex items-start justify-between gap-4 cursor-pointer outline-none relative hover:scale-[1.01] active:scale-[0.99] duration-150 ${
+                  className={`w-full text-right p-4 rounded-2xl border transition-all flex items-start justify-between gap-4 cursor-pointer outline-none relative hover:scale-[1.005] active:scale-[0.995] duration-150 ${
                     activeAdminTab === "SHORTAGES"
-                      ? "bg-rose-100 border-rose-450 ring-2 ring-rose-300/40 shadow-md shadow-rose-500/10 text-rose-950 font-black"
-                      : "bg-rose-50/60 hover:bg-rose-50/90 border-rose-100 shadow-3xs text-slate-800"
+                      ? "bg-[#fef2f2] border-2 border-rose-400 shadow-sm text-rose-950 font-black"
+                      : "bg-[#fff5f5]/70 hover:bg-[#fef2f2] border border-rose-200/80 shadow-3xs text-slate-800"
                   }`}
                 >
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-black text-rose-955 font-arabic flex items-center gap-1.5 justify-start">
-                      <span className="text-base">🚨</span>
-                      {lang === "ar" ? "كشف النواقص والعجز بالمستودع والعيادات" : "Warehouse & Clinic Shortages"}
+                    <h3 className="text-sm sm:text-base font-black text-[#9f1239] font-arabic flex items-center gap-1.5 justify-start">
+                      <span>🚨</span>
+                      <span>{lang === "ar" ? "كشف النواقص والعجز بالمستودع والعيادات" : "Warehouse & Clinic Shortages"}</span>
                     </h3>
-                    <p className={`text-[10.5px] font-arabic mt-1 leading-relaxed ${
-                      activeAdminTab === "SHORTAGES" ? "text-rose-900" : "text-rose-700/80"
+                    <p className={`text-[11px] font-arabic mt-1 leading-snug ${
+                      activeAdminTab === "SHORTAGES" ? "text-[#be123c] font-semibold" : "text-rose-800/80"
                     }`}>
                       {lang === "ar"
                         ? "المستلزمات الطبية والأدوية النشطة التي تخطت حد الأمان المعتمد للتنبيه والمطلوب توريدها فوراً"
                         : "Medical ingredients and active supplies crossing safe security levels."}
                     </p>
                     <div className="mt-2.5 flex items-center gap-1.5">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[9.5px] font-black font-arabic ${
-                        activeAdminTab === "SHORTAGES" ? "bg-rose-650 text-white animate-pulse" : "bg-rose-205 text-rose-850"
+                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-md text-[11px] font-black font-arabic ${
+                        activeAdminTab === "SHORTAGES"
+                          ? "bg-[#fecdd3] text-[#9f1239] shadow-3xs"
+                          : "bg-white border border-rose-200/80 text-[#9f1239] hover:bg-rose-50"
                       }`}>
                         {activeAdminTab === "SHORTAGES"
                           ? (lang === "ar" ? "📍 يعرض هذه الصفحة حالياً" : "📍 Currently Displayed")
@@ -6602,7 +6624,7 @@ export default function App() {
                   </div>
                   
                   {/* Icon Container matching Screenshot 1 */}
-                  <div className="w-12 h-12 rounded-xl bg-white border border-rose-200 shadow-3xs flex items-center justify-center shrink-0">
+                  <div className="w-13 h-13 rounded-2xl bg-white border border-rose-200/80 shadow-2xs flex items-center justify-center shrink-0">
                     <span className="text-2xl">⚠️</span>
                   </div>
                 </button>
@@ -6778,16 +6800,8 @@ export default function App() {
                             <button
                               type="button"
                               onClick={() => {
-                                setEditingItemId(item.id);
-                                setEditId(item.id);
-                                setEditNameAr(item.name_ar);
-                                setEditNameEn(item.name_en);
-                                setEditCategoryAr(item.category_ar);
-                                setEditCategoryEn(item.category_en);
-                                setEditStock(item.stock);
-                                setEditUnitPrice(item.unit_price);
-                                setEditThreshold(currentThreshold);
-                                setEditExpiryDate(item.expiry_date || "");
+                                setSelectedProductId(item.id);
+                                setActivePage("PRODUCT_DETAIL");
                               }}
                               className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs transition-colors font-arabic flex items-center justify-center gap-1 cursor-pointer shadow-3xs"
                             >
@@ -6995,16 +7009,8 @@ export default function App() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setEditingItemId(item.id);
-                                        setEditId(item.id);
-                                        setEditNameAr(item.name_ar);
-                                        setEditNameEn(item.name_en);
-                                        setEditCategoryAr(item.category_ar);
-                                        setEditCategoryEn(item.category_en);
-                                        setEditStock(item.stock);
-                                        setEditUnitPrice(item.unit_price);
-                                        setEditThreshold(currentThreshold);
-                                        setEditExpiryDate(item.expiry_date || "");
+                                        setSelectedProductId(item.id);
+                                        setActivePage("PRODUCT_DETAIL");
                                       }}
                                       className="border border-sky-200 hover:bg-sky-50/60 text-sky-700 font-extrabold px-2 py-1 rounded transition-all text-[10.5px] font-arabic cursor-pointer flex items-center gap-0.5"
                                     >
@@ -7152,28 +7158,36 @@ export default function App() {
 
             {/* Expiry Date Warnings (تنبيهات تاريخ الصلاحية) */}
             {activeAdminTab === "EXPIRIES" && (
-            <div className="bg-white border border-slate-250 rounded-xl shadow-3xs overflow-hidden animate-fadeIn">
-                <div className="bg-amber-50 border-b border-amber-100 p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl animate-bounce">📅</span>
-                    <div>
-                      <h3 className="text-sm font-black text-amber-955 font-arabic">
-                        ⚠️ تنبيهات وفترات صلاحية الأدوية والمستلزمات
-                      </h3>
-                      <p className="text-[10.5px] text-amber-800 font-arabic mt-0.5">
-                        كشف تلقائي مستمر بالأصناف واللقاحات التي تنتهي صلاحيتها خلال 90 يوماً أو أقل لاتخاذ الإجراءات
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
+              <div className="bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden animate-fadeIn" dir="rtl">
+                <div className="bg-[#fefce8] border-b border-amber-200/80 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* Right side: Return button + Title & Subtitle */}
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                     <button
                       type="button"
                       onClick={() => setActiveAdminTab("MASTER")}
-                      className="bg-white hover:bg-rose-100/80 text-rose-900 border border-rose-250 font-black px-3 py-1.5 rounded-lg text-xs font-arabic transition-all flex items-center gap-1 shadow-3xs cursor-pointer active:scale-98"
+                      className="bg-white border border-[#be123c] text-[#be123c] hover:bg-rose-50 font-black px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-arabic transition-all flex items-center gap-1.5 shadow-3xs cursor-pointer active:scale-95 shrink-0"
                     >
-                      ← {lang === "ar" ? "العودة للمستودع الكلي" : "Back to master list"}
+                      <span className="text-sm">➔</span>
+                      <span>{lang === "ar" ? "العودة للمستودع الكلي" : "Back to master list"}</span>
                     </button>
-                    <span className="bg-amber-100 border border-amber-200 text-amber-800 text-[10px] md:text-xs font-black px-3 py-1 pt-1.5 rounded-lg">
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">⚠️</span>
+                      <div>
+                        <h3 className="text-sm sm:text-base font-black text-[#713f12] font-arabic flex items-center gap-1.5">
+                          <span>تنبيهات وفترات صلاحية الأدوية والمستلزمات</span>
+                          <span>📅</span>
+                        </h3>
+                        <p className="text-xs text-[#854d0e] font-arabic mt-0.5">
+                          كشف تلقائي مستمر بالأصناف واللقاحات التي تنتهي صلاحيتها خلال 90 يوماً أو أقل لاتخاذ الإجراءات
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Left side: Badge */}
+                  <div className="flex items-center shrink-0">
+                    <span className="bg-[#fef08a] border border-[#fde047] text-[#713f12] text-xs font-black px-3.5 py-1.5 rounded-lg shadow-3xs">
                       {lang === "ar"
                         ? "تنتهي قريباً / سارية"
                         : "Expiring Soon Tracker"}
@@ -7184,22 +7198,22 @@ export default function App() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-right border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-705 font-bold">
-                        <th className="py-3 px-4 font-arabic border-l border-slate-200/60 text-right">
+                      <tr className="bg-[#fbfbf9] border-b border-slate-200 text-slate-900 font-extrabold">
+                        <th className="py-3.5 px-4 font-arabic text-right">
                           {lang === "ar"
                             ? "اسم العلاج أو المستلزم"
                             : "Supply Item"}
                         </th>
-                        <th className="py-3 px-4 font-arabic border-l border-slate-200/60 text-center">
+                        <th className="py-3.5 px-4 font-arabic border-r border-slate-200/60 text-center">
                           {lang === "ar" ? "القسم الفني" : "Category"}
                         </th>
-                        <th className="py-3 px-4 font-arabic border-l border-slate-200/60 text-center">
+                        <th className="py-3.5 px-4 font-arabic border-r border-slate-200/60 text-center">
                           {lang === "ar" ? "الرصيد المتبقي" : "Stock"}
                         </th>
-                        <th className="py-3 px-4 font-arabic border-l border-slate-200/60 text-center">
+                        <th className="py-3.5 px-4 font-arabic border-r border-slate-200/60 text-center">
                           {lang === "ar" ? "تاريخ انتهاء الصلاحية" : "Expiration"}
                         </th>
-                        <th className="py-3 px-4 font-arabic text-center">
+                        <th className="py-3.5 px-4 font-arabic border-r border-slate-200/60 text-center">
                           {lang === "ar" ? "الحالة والعد التنازلي" : "Status & Countdown"}
                         </th>
                       </tr>
@@ -7209,21 +7223,30 @@ export default function App() {
                         <tr>
                           <td
                             colSpan={5}
-                            className="p-10 text-center text-slate-550 font-arabic bg-slate-50/20"
+                            className="py-12 px-6 text-center bg-white"
                           >
-                            <div className="text-2xl mb-1.5">🛡️</div>
-                            <p className="text-sm font-black text-emerald-700 font-arabic">
-                              كافة تواريخ ومستندات الصلاحية آمنة ومستقرة!
-                            </p>
-                            <p className="text-xs text-slate-450 mt-1 font-arabic">
-                              لا يوجد أي أدوية بمخزون المستشفى شارفت على انتهاء الصلاحية حالياً.
-                            </p>
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              {/* Custom Emblem Shield matching Screenshot 1 */}
+                              <div className="w-12 h-12 flex items-center justify-center">
+                                <svg viewBox="0 0 24 24" className="w-10 h-10" fill="none">
+                                  <path d="M12 22C12 22 20 18 20 10V4L12 2L4 4V10C4 18 12 22 12 22Z" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="#ffffff" />
+                                  <path d="M12 5V17" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
+                                  <path d="M9.5 10C9.5 8.5 10.5 7.5 12 7.5C13.5 7.5 14.5 8.5 14.5 10C14.5 11.5 12 12.5 12 14V14.5" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                              </div>
+                              <h4 className="text-base md:text-lg font-black text-emerald-700 font-arabic mt-1">
+                                كافة تواريخ ومستندات الصلاحية آمنة ومستقرة!
+                              </h4>
+                              <p className="text-xs md:text-sm text-slate-500 font-bold font-arabic">
+                                لا يوجد أي أدوية بمخزون المستشفى شارفت على انتهاء الصلاحية حالياً.
+                              </p>
+                            </div>
                           </td>
                         </tr>
                       ) : (
                         expiringItems.map((item, idx) => {
                           const isAlternate = idx % 2 === 1;
-                          let statusBg = "bg-yellow-50 text-yellow-800 border border-yellow-200";
+                          let statusBg = "bg-amber-100 text-amber-900 border border-amber-200";
                           let statusLabel = "";
 
                           if (item.isExpired) {
@@ -7241,7 +7264,7 @@ export default function App() {
                               key={item.id}
                               className={`transition-colors hover:bg-slate-100/70 ${isAlternate ? "bg-slate-50/50" : "bg-white"}`}
                             >
-                              <td className="py-3 px-4 border-l border-slate-200/60 text-right">
+                              <td className="py-3.5 px-4 text-right">
                                 <span className="font-extrabold text-slate-900 font-arabic block leading-snug">
                                   {lang === "ar" ? item.name_ar : item.name_en}
                                 </span>
@@ -7249,24 +7272,24 @@ export default function App() {
                                   ID: {item.id}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-center border-l border-slate-200/60 font-arabic text-slate-600">
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200/60 font-arabic text-slate-600 font-semibold">
                                 {lang === "ar" ? item.category_ar : item.category_en}
                               </td>
-                              <td className="py-3 px-4 text-center border-l border-slate-200/60">
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200/60">
                                 <button
                                   type="button"
                                   onClick={() => setSelectedStockBreakdownItem(item)}
                                   title={lang === "ar" ? "اضغط لعرض تفاصيل تواريخ الصلاحية والكميات" : "Click to view stock breakdown by expiry dates"}
-                                  className="font-mono font-bold text-slate-705 cursor-pointer hover:text-sky-605 hover:underline transition-all"
+                                  className="font-mono font-extrabold text-slate-800 cursor-pointer hover:text-sky-600 hover:underline transition-all"
                                 >
                                   {item.stock} {lang === "ar" ? "وحدة" : "units"}
                                 </button>
                               </td>
-                              <td className="py-3 px-4 text-center border-l border-slate-200/60 font-mono font-bold text-slate-800">
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200/60 font-mono font-extrabold text-slate-800">
                                 {item.expiry_date ? item.expiry_date.replace(/-/g, "/") : "-"}
                               </td>
-                              <td className="py-3 px-4 text-center">
-                                <span className={`inline-block px-2.5 py-1 rounded-lg text-[10.5px] ${statusBg} font-arabic font-extrabold`}>
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200/60">
+                                <span className={`inline-block px-3 py-1 rounded-lg text-xs ${statusBg} font-arabic font-extrabold`}>
                                   {statusLabel}
                                 </span>
                               </td>
@@ -7278,57 +7301,64 @@ export default function App() {
                   </table>
                 </div>
               </div>
-              )}
+            )}
 
-              {/* shortages table (جدول النواقص وبس) */}
-              {activeAdminTab === "SHORTAGES" && (
-                <div className="bg-white border border-slate-250 rounded-xl shadow-3xs overflow-hidden animate-fadeIn">
-                  <div className="bg-rose-50 border-b border-rose-100 p-4 flex items-center justify-between">
+            {/* Shortages Table (جدول النواقص والعجز) */}
+            {activeAdminTab === "SHORTAGES" && (
+              <div className="bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden animate-fadeIn" dir="rtl">
+                <div className="bg-[#fef2f2] border-b border-rose-200/80 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* Right side: Return button + Title & Subtitle */}
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setActiveAdminTab("MASTER")}
+                      className="bg-white border border-[#be123c] text-[#be123c] hover:bg-rose-50 font-black px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-arabic transition-all flex items-center gap-1.5 shadow-3xs cursor-pointer active:scale-95 shrink-0"
+                    >
+                      <span className="text-sm">➔</span>
+                      <span>{lang === "ar" ? "العودة للمستودع الكلي" : "Back to master list"}</span>
+                    </button>
+
                     <div className="flex items-center gap-2">
-                      <span className="text-xl animate-pulse">⚠️</span>
+                      <span className="text-xl">🚨</span>
                       <div>
-                        <h3 className="text-sm font-black text-rose-955 font-arabic">
-                          🚨 كشف النواقص والعجز بالمستودع والعيادات
+                        <h3 className="text-sm sm:text-base font-black text-[#9f1239] font-arabic flex items-center gap-1.5">
+                          <span>كشف النواقص والعجز بالمستودع والعيادات</span>
+                          <span>⚠️</span>
                         </h3>
-                        <p className="text-[10.5px] text-rose-700 font-arabic mt-0.5 animate-pulse">
-                          المستلزمات الطبية والأدوية النشطة التي تخطت حد الأمان
-                          المعتمد للتنبيه والمطلوب توريدها فوراً
+                        <p className="text-xs text-[#be123c] font-arabic mt-0.5">
+                          المستلزمات الطبية والأدوية النشطة التي تخطت حد الأمان المعتمد للتنبيه والمطلوب توريدها فوراً
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveAdminTab("MASTER")}
-                        className="bg-white hover:bg-rose-100/80 text-rose-900 border border-rose-250 font-black px-3 py-1.5 rounded-lg text-xs font-arabic transition-all flex items-center gap-1 shadow-3xs cursor-pointer active:scale-98"
-                      >
-                        ← {lang === "ar" ? "العودة للمستودع الكلي" : "Back to master list"}
-                      </button>
-                      <span className="bg-rose-150 border border-rose-200 text-rose-900 text-[10px] md:text-xs font-black px-3 py-1 pt-1.5 rounded-lg">
-                        {lang === "ar"
-                          ? "مستلزمات تحت حد الأمان"
-                          : "Critical Shortages"}
-                      </span>
-                    </div>
                   </div>
+
+                  {/* Left side: Badge */}
+                  <div className="flex items-center shrink-0">
+                    <span className="bg-[#ffe4e6] border border-[#fecdd3] text-[#9f1239] text-xs font-black px-3.5 py-1.5 rounded-lg shadow-3xs">
+                      {lang === "ar"
+                        ? "مستلزمات تحت حد الأمان"
+                        : "Critical Shortages"}
+                    </span>
+                  </div>
+                </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-right border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-705 font-bold">
-                        <th className="py-3 px-4 font-arabic border-l border-slate-200/60 text-right">
+                      <tr className="bg-[#fbfbf9] border-b border-slate-200 text-slate-900 font-extrabold">
+                        <th className="py-3.5 px-4 font-arabic text-right">
                           {lang === "ar" ? "اسم العلاج أو المستلزم" : "Supply Item"}
                         </th>
-                        <th className="py-3 px-4 font-arabic border-l border-slate-200/60 text-center">
+                        <th className="py-3.5 px-4 font-arabic border-r border-slate-200/60 text-center">
                           {lang === "ar" ? "القسم الفني" : "Category"}
                         </th>
-                        <th className="py-3 px-4 font-arabic border-l border-slate-200/60 text-center">
+                        <th className="py-3.5 px-4 font-arabic border-r border-slate-200/60 text-center">
                           {lang === "ar" ? "الرصيد المتبقي" : "Stock"}
                         </th>
-                        <th className="py-3 px-4 font-arabic border-l border-slate-200/60 text-center">
+                        <th className="py-3.5 px-4 font-arabic border-r border-slate-200/60 text-center">
                           {lang === "ar" ? "حد الأمان" : "Safety Alert"}
                         </th>
-                        <th className="py-3 px-4 font-arabic text-center">
+                        <th className="py-3.5 px-4 font-arabic border-r border-slate-200/60 text-center">
                           {lang === "ar" ? "حالة العجز" : "Status & Alert"}
                         </th>
                       </tr>
@@ -7345,74 +7375,61 @@ export default function App() {
                             <tr>
                               <td
                                 colSpan={5}
-                                className="p-10 text-center text-slate-550 font-arabic bg-slate-50/20"
+                                className="py-12 px-6 text-center bg-white"
                               >
-                                <div className="text-2xl mb-1.5">🛡️</div>
-                                <p className="text-sm font-black text-emerald-700 font-arabic">
-                                  لا يوجد أي عجز أو نقص في المخزون!
-                                </p>
+                                <div className="flex flex-col items-center justify-center gap-2">
+                                  <span className="text-3xl">🛡️</span>
+                                  <h4 className="text-base font-black text-emerald-700 font-arabic">
+                                    لا يوجد أي عجز أو نقص في المخزون!
+                                  </h4>
+                                </div>
                               </td>
                             </tr>
                           );
                         }
 
                         return shortageItems.map((item, idx) => {
-                          const isAlternate = idx % 2 === 1;
                           const threshold = itemThresholds[item.id] !== undefined ? itemThresholds[item.id] : 12;
                           const deficit_percent = threshold > 0 ? Math.round(((threshold - item.stock) / threshold) * 100) : 100;
-                          const isCritical = item.stock <= threshold / 3 || item.stock === 0;
+                          const isZero = item.stock === 0;
 
                           return (
                             <tr
                               key={`${item.id}-${idx}`}
-                              className={`transition-colors hover:bg-slate-100/70 ${isAlternate ? "bg-slate-50/50" : "bg-white"}`}
+                              className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors"
                             >
-                              <td className="py-3 px-4 border-l border-slate-200/60 text-right">
-                                <span className="font-extrabold text-slate-900 font-arabic block leading-snug">
+                              <td className="py-3.5 px-4 text-right">
+                                <span className="font-extrabold text-slate-900 text-xs sm:text-sm font-arabic block leading-snug">
                                   {lang === "ar" ? item.name_ar : item.name_en}
                                 </span>
                                 <span className="text-[10px] font-mono block mt-0.5 text-slate-400">
                                   ID: {item.id}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-center border-l border-slate-200/60 font-arabic text-slate-600">
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200/60 font-arabic font-semibold text-slate-700 text-xs">
                                 {lang === "ar" ? item.category_ar : item.category_en}
                               </td>
-                              <td className="py-3 px-4 text-center border-l border-slate-200/60 text-rose-700 font-black font-mono">
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200/60">
                                 <button
                                   type="button"
                                   onClick={() => setSelectedStockBreakdownItem(item)}
                                   title={lang === "ar" ? "اضغط لعرض تفاصيل تواريخ الصلاحية والكميات" : "Click to view stock breakdown by expiry dates"}
-                                  className="font-mono font-bold text-rose-700 cursor-pointer hover:text-sky-600 hover:underline transition-all"
+                                  className="font-arabic font-black text-rose-600 cursor-pointer hover:text-rose-800 hover:underline transition-all text-xs"
                                 >
                                   {item.stock}{" "}
                                   {lang === "ar" ? "وحدة متبقية" : "Units Left"}
                                 </button>
                               </td>
 
-                              <td className="py-3 px-4 text-center border-l border-slate-100 font-mono font-bold text-slate-500 font-medium font-arabic">
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200/60 font-arabic font-semibold text-slate-600 text-xs">
                                 {threshold} {lang === "ar" ? "وحدة" : "units"}
                               </td>
 
-                              <td className="py-3 px-4 text-center">
-                                <span
-                                  className={`inline-block px-2.5 py-1 rounded-full text-[10.5px] font-black font-arabic ${
-                                    isCritical
-                                      ? "bg-rose-600 text-white animate-pulse"
-                                      : "bg-amber-100 text-amber-800 border border-amber-200"
-                                  }`}
-                                >
-                                  {item.stock === 0
-                                    ? lang === "ar"
-                                      ? "🚨 رصيد صفر"
-                                      : "🚨 Out of Stock"
-                                    : isCritical
-                                      ? lang === "ar"
-                                        ? `🚨 عجز حرج (-${deficit_percent}%)`
-                                        : `🚨 Critical Deficit (-${deficit_percent}%)`
-                                      : lang === "ar"
-                                        ? `⚠️ عجز متوسط (-${deficit_percent}%)`
-                                        : `⚠️ Medium Deficit (-${deficit_percent}%)`}
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200/60">
+                                <span className="bg-[#f43f5e] text-white px-4 py-1.5 rounded-full text-xs font-black font-arabic inline-flex items-center gap-1 shadow-3xs">
+                                  {isZero
+                                    ? "🚨 رصيد صفر"
+                                    : `🚨 عجز حرج (-${deficit_percent}%)`}
                                 </span>
                               </td>
                             </tr>
@@ -7423,7 +7440,7 @@ export default function App() {
                   </table>
                 </div>
               </div>
-              )}
+            )}
             </div>
           )}
 
