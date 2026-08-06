@@ -269,7 +269,7 @@ export default function DailyConsumptionReport({
         <div className="bg-white rounded-2xl border-2 border-slate-300 border-t-4 border-t-amber-500 p-3.5 sm:p-4 shadow-3xs flex items-center justify-between relative overflow-hidden">
           <div className={`${lang === "ar" ? "text-right" : "text-left"}`}>
             <span className="text-xs font-bold text-slate-500 font-arabic block">
-              {lang === "ar" ? "تكلفة المستلزمات الإجمالية" : "Total Supplies Cost"}
+              {lang === "ar" ? "إجمالي قيمة الاصناف المباعة" : "Total Supplies Cost"}
             </span>
             <p className="text-lg sm:text-xl font-black text-emerald-700 font-mono mt-1">
               {formatCurrency(aggregatedData.totalCost, lang)}

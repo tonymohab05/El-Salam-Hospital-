@@ -81,19 +81,20 @@ export default function HospitalHeader({
       dir={currentLang === "ar" ? "rtl" : "ltr"}
       className="bg-white border-b-2 border-hospital-blue shadow-xs px-3 md:px-6 py-2.5 flex flex-row items-center justify-between gap-3 transition-all shrink-0 print:hidden"
     >
-      {/* Brand Logo, Dept info & Mobile Hamburger Menu Button */}
+      {/* Brand Logo, Dept info & Hamburger Menu Button */}
       <div className="flex items-center gap-2.5">
         {onToggleMobileNav && (
           <button
             type="button"
             onClick={onToggleMobileNav}
-            className="lg:hidden bg-[#0f172a] hover:bg-slate-800 text-white p-2.5 rounded-lg flex items-center justify-center cursor-pointer shadow-xs shrink-0 transition-transform active:scale-95"
+            className="bg-[#0f172a] hover:bg-slate-800 text-white p-2.5 rounded-xl flex items-center justify-center cursor-pointer shadow-xs shrink-0 transition-transform active:scale-95"
             aria-label="Toggle Menu"
+            title={currentLang === "ar" ? "قائمة الصفحات" : "Pages Menu"}
           >
             {mobileNavOpen ? (
               <X className="w-5 h-5 text-rose-400" />
             ) : (
-              <Menu className="w-5 h-5 text-sky-300" />
+              <Menu className="w-5 h-5 text-sky-400" />
             )}
           </button>
         )}

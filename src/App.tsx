@@ -756,6 +756,16 @@ export default function App() {
   // View active stock breakdown by expiry dates modal state
   const [selectedStockBreakdownItem, setSelectedStockBreakdownItem] = useState<MedicalItem | null>(null);
 
+  // Editing Operator Account Details Modal State
+  const [editingOperator, setEditingOperator] = useState<ReceptionOperator | null>(null);
+  const [editOpFullName, setEditOpFullName] = useState("");
+  const [editOpUsername, setEditOpUsername] = useState("");
+  const [editOpPassword, setEditOpPassword] = useState("");
+  const [editOpRole, setEditOpRole] = useState<"RECEPTION" | "SUPER_ADMIN">("RECEPTION");
+  const [editOpIsActive, setEditOpIsActive] = useState(true);
+  const [showRlsSqlModal, setShowRlsSqlModal] = useState(false);
+  const [sqlCopied, setSqlCopied] = useState(false);
+
   // Quick Global Threshold overrider helper
   const [globalThresholdInput, setGlobalThresholdInput] =
     useState<string>("12");
@@ -2788,6 +2798,64 @@ export default function App() {
     setTimeout(() => setSaveSuccessMessage(null), 3000);
   };
 
+  // Open edit modal for an operator account
+  const handleOpenEditOperatorModal = (op: ReceptionOperator) => {
+    setEditingOperator(op);
+    setEditOpFullName(op.fullName || op.username || op.email);
+    setEditOpUsername(op.username || op.email);
+    setEditOpPassword("");
+    setEditOpRole(op.role || "RECEPTION");
+    setEditOpIsActive(op.isActive);
+  };
+
+  // Save changes to edited operator account
+  const handleSaveOperatorEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOperator) return;
+
+    const oldIdentifier = (editingOperator.username || editingOperator.email).toLowerCase();
+    const cleanUsername = editOpUsername.trim().toLowerCase();
+    const cleanFullName = editOpFullName.trim() || cleanUsername;
+
+    if (!cleanUsername) return;
+
+    const updatedOperators = operators.map((op) => {
+      const currentId = (op.username || op.email).toLowerCase();
+      if (currentId === oldIdentifier) {
+        return {
+          ...op,
+          email: cleanUsername,
+          username: cleanUsername,
+          fullName: cleanFullName,
+          role: editOpRole,
+          isActive: editOpIsActive,
+        };
+      }
+      return op;
+    });
+
+    setOperators(updatedOperators);
+    saveOperatorsToCache(updatedOperators);
+
+    if (isSupabaseConfigured) {
+      await upsertSupabaseAppUser(
+        cleanUsername,
+        editOpPassword || "reception123",
+        cleanFullName,
+        editOpRole,
+        editOpIsActive
+      );
+    }
+
+    setEditingOperator(null);
+    setSaveSuccessMessage(
+      lang === "ar"
+        ? `✓ تم تحديث وتعديل حساب "${cleanFullName}" بنجاح!`
+        : `✓ Account credentials for "${cleanFullName}" updated successfully!`
+    );
+    setTimeout(() => setSaveSuccessMessage(null), 3500);
+  };
+
   // Staged Restock management handlers
   const handleRemoveStagedItem = (id: string) => {
     setStagedRestockItems((prev) => prev.filter((item) => item.id !== id));
@@ -2922,7 +2990,7 @@ export default function App() {
   // Toggle active operators status
   const handleToggleOperatorStatus = async (email: string) => {
     // Keep at least one admin operator active for safety
-    if (email === "Antonymohab@gmail.com" || email === "admin") {
+    if (email === "Antonymohab@gmail.com") {
       setSaveSuccessMessage(
         lang === "ar"
           ? "⚠️ غير مسموح بتعطيل حساب المالك الأساسي!"
@@ -2949,7 +3017,7 @@ export default function App() {
 
   // Delete operator
   const handleDeleteOperator = async (email: string) => {
-    if (email === "Antonymohab@gmail.com" || email === "admin") return;
+    if (email === "Antonymohab@gmail.com") return;
     const updated = operators.filter((op) => op.email !== email && op.username !== email);
     saveOperatorsToCache(updated);
 
@@ -3624,9 +3692,9 @@ export default function App() {
         onToggleMobileNav={() => setMobileNavOpen(!mobileNavOpen)}
       />
 
-      {/* Mobile Slide-Over Navigation Drawer */}
+      {/* Universal Slide-Over Navigation Drawer (Mobile, Tablet & Desktop) */}
       {mobileNavOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden" dir={lang === "ar" ? "rtl" : "ltr"}>
+        <div className="fixed inset-0 z-50" dir={lang === "ar" ? "rtl" : "ltr"}>
           {/* Dark Backdrop overlay */}
           <div
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
@@ -3634,9 +3702,9 @@ export default function App() {
           />
 
           {/* Drawer Panel anchored to the RIGHT side */}
-          <div className="fixed top-0 right-0 bottom-0 z-10 w-72 max-w-[85vw] bg-slate-100 border-l border-slate-200 shadow-2xl p-3.5 overflow-y-auto flex flex-col gap-3 animate-slideInRight">
+          <div className="fixed top-0 right-0 bottom-0 z-10 w-80 max-w-[90vw] bg-slate-100 border-l border-slate-200 shadow-2xl p-4 overflow-y-auto flex flex-col gap-3.5 animate-slideInRight">
             {/* Header card inside drawer */}
-            <div className="bg-white border border-slate-200/80 p-3 rounded-xl flex items-center justify-between shadow-2xs">
+            <div className="bg-white border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between shadow-2xs">
               <div className="flex items-center gap-2.5">
                 <HospitalLogo className="w-8 h-8 shrink-0 filter drop-shadow-3xs" />
                 <div>
@@ -3652,9 +3720,9 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
 
@@ -3666,19 +3734,19 @@ export default function App() {
                   setActivePage("ENTRANCE");
                   setMobileNavOpen(false);
                 }}
-                className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                className={`w-full p-3 rounded-2xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
                   activePage === "ENTRANCE"
-                    ? "bg-hospital-blue text-white border-hospital-blue font-black shadow-3xs"
-                    : "bg-white hover:bg-sky-50/70 border-slate-200 hover:border-sky-300 text-slate-700 hover:text-hospital-blue font-bold"
+                    ? "bg-[#0284c7] text-white border-[#0284c7] font-black shadow-xs"
+                    : "bg-white hover:bg-sky-50/70 border-slate-200 hover:border-sky-300 text-slate-800 font-bold"
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <ClipboardList className="w-4 h-4 shrink-0 text-hospital-blue" />
-                  <span className={`text-xs truncate ${activePage === "ENTRANCE" ? "text-white" : ""}`}>
+                  <ClipboardList className={`w-4 h-4 shrink-0 ${activePage === "ENTRANCE" ? "text-white" : "text-sky-600"}`} />
+                  <span className="text-xs truncate">
                     {lang === "ar" ? "بوابة الاستقبال والفوترة" : "Entrance Desk"}
                   </span>
                 </div>
-                {activePage === "ENTRANCE" && <span className="text-xs shrink-0">✓</span>}
+                {activePage === "ENTRANCE" && <span className="text-xs shrink-0 font-black">✓</span>}
               </button>
 
               <button
@@ -3687,19 +3755,19 @@ export default function App() {
                   setActivePage("ARCHIVE");
                   setMobileNavOpen(false);
                 }}
-                className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                className={`w-full p-3 rounded-2xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
                   activePage === "ARCHIVE"
-                    ? "bg-hospital-blue text-white border-hospital-blue font-black shadow-3xs"
-                    : "bg-white hover:bg-sky-50/70 border-slate-200 hover:border-sky-300 text-slate-700 hover:text-hospital-blue font-bold"
+                    ? "bg-[#0284c7] text-white border-[#0284c7] font-black shadow-xs"
+                    : "bg-white hover:bg-sky-50/70 border-slate-200 hover:border-sky-300 text-slate-800 font-bold"
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <Database className="w-4 h-4 shrink-0 text-hospital-blue" />
-                  <span className={`text-xs truncate ${activePage === "ARCHIVE" ? "text-white" : ""}`}>
+                  <Database className={`w-4 h-4 shrink-0 ${activePage === "ARCHIVE" ? "text-white" : "text-slate-700"}`} />
+                  <span className="text-xs truncate">
                     {lang === "ar" ? "سجلات وإيصالات المرضى" : "Patient Registry"}
                   </span>
                 </div>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold shrink-0 ${
                   activePage === "ARCHIVE" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700 border border-slate-200"
                 }`}>
                   {activeDateReceiptsCount}
@@ -3712,29 +3780,28 @@ export default function App() {
                   setActivePage("CONSUMPTION");
                   setMobileNavOpen(false);
                 }}
-                className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                className={`w-full p-3 rounded-2xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
                   activePage === "CONSUMPTION"
-                    ? "bg-hospital-blue text-white border-hospital-blue font-black shadow-3xs"
-                    : "bg-white hover:bg-sky-50/70 border-slate-200 hover:border-sky-300 text-slate-700 hover:text-hospital-blue font-bold"
+                    ? "bg-[#0284c7] text-white border-[#0284c7] font-black shadow-xs"
+                    : "bg-white hover:bg-sky-50/70 border-slate-200 hover:border-sky-300 text-slate-800 font-bold"
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <TrendingUp className="w-4 h-4 shrink-0 text-hospital-blue" />
-                  <span className={`text-xs truncate ${activePage === "CONSUMPTION" ? "text-white" : ""}`}>
+                  <TrendingUp className={`w-4 h-4 shrink-0 ${activePage === "CONSUMPTION" ? "text-white" : "text-sky-600"}`} />
+                  <span className="text-xs truncate">
                     {lang === "ar" ? "دفتر الاستهلاك اليومي" : "Daily Consumption"}
                   </span>
                 </div>
-                {activePage === "CONSUMPTION" && <span className="text-xs shrink-0">✓</span>}
+                {activePage === "CONSUMPTION" && <span className="text-xs shrink-0 font-black">✓</span>}
               </button>
 
               {currentUser?.role === "SUPER_ADMIN" && (
                 <>
-                  <div className="h-px bg-slate-200/80 my-1" />
-                  <div className="px-1 py-0.5 flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-black text-sky-800 font-arabic block">
+                  <div className="pt-2 pb-1 flex items-center justify-between px-1">
+                    <span className="text-xs font-bold text-slate-800 font-arabic">
                       {lang === "ar" ? "إدارة المخزن والموظفين" : "Admin & Warehouse"}
                     </span>
-                    <span className="text-[9px] bg-sky-100 text-sky-800 font-bold px-1.5 py-0.5 rounded border border-sky-200">
+                    <span className="text-[10px] bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded-md border border-sky-200">
                       {lang === "ar" ? "أدمن" : "Admin"}
                     </span>
                   </div>
@@ -3745,19 +3812,19 @@ export default function App() {
                       setActivePage("ADMIN");
                       setMobileNavOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                    className={`w-full p-3 rounded-2xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
                       activePage === "ADMIN"
-                        ? "bg-hospital-blue text-white border-hospital-blue font-black shadow-3xs"
-                        : "bg-white hover:bg-sky-50/70 border-slate-200 hover:border-sky-300 text-slate-700 hover:text-hospital-blue font-bold"
+                        ? "bg-[#0284c7] text-white border-[#0284c7] font-black shadow-xs"
+                        : "bg-rose-50/70 border-rose-200/90 text-rose-800 hover:bg-rose-100/70 font-bold"
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Shield className="w-4 h-4 shrink-0 text-hospital-blue" />
-                      <span className={`text-xs truncate ${activePage === "ADMIN" ? "text-white" : ""}`}>
+                      <Shield className={`w-4 h-4 shrink-0 ${activePage === "ADMIN" ? "text-white" : "text-rose-600"}`} />
+                      <span className="text-xs truncate">
                         {lang === "ar" ? "جرد وأسعار المخزون" : "Warehouse Stock"}
                       </span>
                     </div>
-                    {activePage === "ADMIN" && <span className="text-xs shrink-0">✓</span>}
+                    {activePage === "ADMIN" && <span className="text-xs shrink-0 font-black">✓</span>}
                   </button>
 
                   <button
@@ -3766,19 +3833,19 @@ export default function App() {
                       setActivePage("RESTOCK");
                       setMobileNavOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                    className={`w-full p-3 rounded-2xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
                       activePage === "RESTOCK"
-                        ? "bg-hospital-blue text-white border-hospital-blue font-black shadow-3xs"
-                        : "bg-white hover:bg-sky-50/70 border-slate-200 hover:border-sky-300 text-slate-700 hover:text-hospital-blue font-bold"
+                        ? "bg-[#0284c7] text-white border-[#0284c7] font-black shadow-xs"
+                        : "bg-emerald-50/70 border-emerald-200/90 text-emerald-800 hover:bg-emerald-100/70 font-bold"
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Plus className="w-4 h-4 shrink-0 text-hospital-blue" />
-                      <span className={`text-xs truncate ${activePage === "RESTOCK" ? "text-white" : ""}`}>
+                      <Plus className={`w-4 h-4 shrink-0 ${activePage === "RESTOCK" ? "text-white" : "text-emerald-600"}`} />
+                      <span className="text-xs truncate">
                         {lang === "ar" ? "تزويد المخزون" : "Restock Supplies"}
                       </span>
                     </div>
-                    {activePage === "RESTOCK" && <span className="text-xs shrink-0">✓</span>}
+                    {activePage === "RESTOCK" && <span className="text-xs shrink-0 font-black">✓</span>}
                   </button>
 
                   <button
@@ -3787,19 +3854,19 @@ export default function App() {
                       setActivePage("OPERATORS");
                       setMobileNavOpen(false);
                     }}
-                    className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                    className={`w-full p-3 rounded-2xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
                       activePage === "OPERATORS"
-                        ? "bg-hospital-blue text-white border-hospital-blue font-black shadow-3xs"
-                        : "bg-white hover:bg-sky-50/70 border-slate-200 hover:border-sky-300 text-slate-700 hover:text-hospital-blue font-bold"
+                        ? "bg-[#0284c7] text-white border-[#0284c7] font-black shadow-xs"
+                        : "bg-indigo-50/70 border-indigo-200/90 text-indigo-800 hover:bg-indigo-100/70 font-bold"
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Users className="w-4 h-4 shrink-0 text-hospital-blue" />
-                      <span className={`text-xs truncate ${activePage === "OPERATORS" ? "text-white" : ""}`}>
+                      <Users className={`w-4 h-4 shrink-0 ${activePage === "OPERATORS" ? "text-white" : "text-indigo-600"}`} />
+                      <span className="text-xs truncate">
                         {lang === "ar" ? "صلاحيات الموظفين" : "Operators Privilege"}
                       </span>
                     </div>
-                    {activePage === "OPERATORS" && <span className="text-xs shrink-0">✓</span>}
+                    {activePage === "OPERATORS" && <span className="text-xs shrink-0 font-black">✓</span>}
                   </button>
                 </>
               )}
@@ -3808,155 +3875,11 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Grid Workspace layout panel with Right Vertical Sidebar Navigation in RTL */}
+      {/* Main Grid Workspace layout panel */}
       <main
-        className="flex-1 max-w-7xl w-full mx-auto p-3 md:p-5 flex flex-col lg:flex-row gap-5 items-start print:block print:p-0 print:max-w-full print:w-full"
+        className="flex-1 max-w-[1600px] w-full mx-auto p-3 md:p-5 flex flex-col gap-5 items-start print:block print:p-0 print:max-w-full print:w-full"
         dir={lang === "ar" ? "rtl" : "ltr"}
       >
-        {/* Desktop Vertical Navigation Sidebar */}
-        <aside
-          className="hidden lg:block w-64 shrink-0 bg-white border border-slate-250 rounded-2xl p-3.5 shadow-3xs relative overflow-hidden print:hidden"
-          dir={lang === "ar" ? "rtl" : "ltr"}
-        >
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-hospital-blue via-sky-600 to-emerald-500" />
-
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between pb-3 mb-2.5 border-b border-slate-150">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-hospital-blue/10 text-hospital-blue">
-                <HeartPulse className="w-4 h-4 animate-pulse" />
-              </div>
-              <div>
-                <h2 className="text-xs font-black text-slate-800 font-arabic">
-                  {lang === "ar" ? "قائمة الصفحات" : "Navigation Menu"}
-                </h2>
-                <span className="text-[10px] text-slate-400 font-bold block font-arabic">
-                  {lang === "ar" ? "مستشفى السلام" : "El-Salam Hospital"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Vertical Navigation Buttons */}
-          <div className="flex flex-col gap-1.5">
-            {/* 1. ENTRANCE */}
-            <button
-              type="button"
-              onClick={() => setActivePage("ENTRANCE")}
-              className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                activePage === "ENTRANCE"
-                  ? "bg-hospital-blue text-white border-hospital-blue font-black shadow-3xs"
-                  : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
-              }`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <ClipboardList className="w-4 h-4 shrink-0" />
-                <span className="text-xs truncate">{lang === "ar" ? "بوابة الاستقبال والفوترة" : "Entrance Desk"}</span>
-              </div>
-              {activePage === "ENTRANCE" && <span className="text-xs shrink-0">✓</span>}
-            </button>
-
-            {/* 2. ARCHIVE */}
-            <button
-              type="button"
-              onClick={() => setActivePage("ARCHIVE")}
-              className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                activePage === "ARCHIVE"
-                  ? "bg-slate-800 text-white border-slate-800 font-black shadow-3xs"
-                  : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
-              }`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Database className="w-4 h-4 shrink-0" />
-                <span className="text-xs truncate">{lang === "ar" ? "سجلات وإيصالات المرضى" : "Patient Registry"}</span>
-              </div>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 ${
-                activePage === "ARCHIVE" ? "bg-white text-slate-800" : "bg-slate-200 text-slate-700"
-              }`}>
-                {activeDateReceiptsCount}
-              </span>
-            </button>
-
-            {/* 3. CONSUMPTION */}
-            <button
-              type="button"
-              onClick={() => setActivePage("CONSUMPTION")}
-              className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                activePage === "CONSUMPTION"
-                  ? "bg-emerald-600 text-white border-emerald-600 font-black shadow-3xs"
-                  : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
-              }`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <TrendingUp className="w-4 h-4 shrink-0" />
-                <span className="text-xs truncate">{lang === "ar" ? "دفتر الاستهلاك اليومي" : "Daily Consumption"}</span>
-              </div>
-              {activePage === "CONSUMPTION" && <span className="text-xs shrink-0">✓</span>}
-            </button>
-
-            {/* SUPER_ADMIN buttons */}
-            {currentUser?.role === "SUPER_ADMIN" && (
-              <>
-                <div className="h-px bg-slate-200 my-1" />
-                <span className="text-[10px] uppercase font-black text-slate-400 font-arabic px-1 block">
-                  {lang === "ar" ? "إدارة المخزن والموظفين" : "Admin & Warehouse"}
-                </span>
-
-                {/* 4. ADMIN */}
-                <button
-                  type="button"
-                  onClick={() => setActivePage("ADMIN")}
-                  className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                    activePage === "ADMIN"
-                      ? "bg-rose-700 text-white border-rose-700 font-black shadow-3xs"
-                      : "bg-[#fff1f2] hover:bg-[#ffe4e6] border-[#fecdd3] text-[#be123c]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Shield className="w-4 h-4 shrink-0" />
-                    <span className="text-xs truncate">{lang === "ar" ? "جرد وأسعار المخزون" : "Warehouse Stock"}</span>
-                  </div>
-                  {activePage === "ADMIN" && <span className="text-xs shrink-0">✓</span>}
-                </button>
-
-                {/* 5. RESTOCK */}
-                <button
-                  type="button"
-                  onClick={() => setActivePage("RESTOCK")}
-                  className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                    activePage === "RESTOCK"
-                      ? "bg-emerald-700 text-white border-emerald-700 font-black shadow-3xs"
-                      : "bg-[#ecfdf5] hover:bg-[#d1fae5] border-[#a7f3d0] text-[#047857]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Plus className="w-4 h-4 shrink-0" />
-                    <span className="text-xs truncate">{lang === "ar" ? "تزويد المخزون" : "Restock Supplies"}</span>
-                  </div>
-                  {activePage === "RESTOCK" && <span className="text-xs shrink-0">✓</span>}
-                </button>
-
-                {/* 6. OPERATORS */}
-                <button
-                  type="button"
-                  onClick={() => setActivePage("OPERATORS")}
-                  className={`w-full p-2.5 rounded-xl border font-arabic transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                    activePage === "OPERATORS"
-                      ? "bg-indigo-700 text-white border-indigo-700 font-black shadow-3xs"
-                      : "bg-[#e0e7ff] hover:bg-[#c7d2fe] border-[#c7d2fe] text-[#3730a3]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Users className="w-4 h-4 shrink-0" />
-                    <span className="text-xs truncate">{lang === "ar" ? "صلاحيات الموظفين" : "Operators Privilege"}</span>
-                  </div>
-                  {activePage === "OPERATORS" && <span className="text-xs shrink-0">✓</span>}
-                </button>
-              </>
-            )}
-          </div>
-        </aside>
-
         {/* Content Workspace Frame */}
         <div className="flex-1 w-full min-w-0 flex flex-col gap-4" dir={lang === "ar" ? "rtl" : "ltr"}>
           {activePage === "PRODUCT_DETAIL" ? (
@@ -5000,8 +4923,8 @@ export default function App() {
                           <div className="flex gap-2 font-arabic font-bold text-slate-705">
                             <span className="text-slate-400 font-bold whitespace-nowrap">
                               {lang === "ar"
-                                ? "منفذ الصرف المالي:"
-                                : "Billing Officer:"}
+                                ? "موظف المكتب:"
+                                : "Desk Officer:"}
                             </span>
                             <span className="font-mono text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200">
                               {getUserName(invoice.billing_officer_email, lang, operators)}
@@ -5061,17 +4984,17 @@ export default function App() {
                                 </td>
                               </tr>
                             ))}
-                            {/* Grand Total Row */}
-                            <tr className="bg-slate-50/90 font-black border-t-2 border-slate-400">
+                            {/* Grand Total Row - Prominent & Enlarged */}
+                            <tr className="bg-sky-50/90 font-black border-t-2 border-slate-400">
                               <td
                                 colSpan={3}
-                                className="py-3 px-3 text-right border-r border-slate-300 font-arabic text-xs"
+                                className="py-4 px-4 text-right border-r border-slate-300 font-arabic text-sm sm:text-base text-slate-900"
                               >
                                 {lang === "ar"
-                                  ? "إجمالي كلفة المستلزمات (الصافي):"
+                                  ? "إجمالي قيمة الاصناف المباعة:"
                                   : "Voucher Total Cost (EGP):"}
                               </td>
-                              <td className="py-3 px-3 text-center border-r border-slate-300 font-mono text-xs">
+                              <td className="py-4 px-4 text-center border-r border-slate-300 font-mono text-sm sm:text-base font-black">
                                 {formatArabicDigits(
                                   invoice.invoice_lines.reduce(
                                     (acc, l) => acc + l.quantity,
@@ -5080,7 +5003,7 @@ export default function App() {
                                   lang,
                                 )}
                               </td>
-                              <td className="py-3 px-3 text-left font-mono text-emerald-700 text-xs text-slate-900 shadow-3xs">
+                              <td className="py-4 px-4 text-left font-mono text-emerald-700 text-base sm:text-lg font-black text-slate-900 shadow-3xs">
                                 {formatCurrency(invoice.grand_total, lang)}
                               </td>
                             </tr>
@@ -5088,30 +5011,19 @@ export default function App() {
                         </table>
                       </div>
 
-                      {/* Written Currency */}
-                      <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 border border-slate-200 rounded-xl p-4 bg-slate-50/50 mb-6 text-xs">
+                      {/* Written Currency - Enlarged & Prominent */}
+                      <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4 border-2 border-sky-200 rounded-2xl p-5 sm:p-6 bg-gradient-to-r from-sky-50/80 via-blue-50/50 to-indigo-50/30 mb-6 text-sm">
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block font-arabic">
+                          <span className="text-xs uppercase font-extrabold text-slate-500 block font-arabic mb-1">
                             {lang === "ar" ? "فقط وقدره:" : "Written Amount:"}
                           </span>
-                          <span className="font-bold text-slate-800 font-arabic italic">
+                          <span className="font-black text-hospital-blue font-arabic text-base sm:text-lg italic">
                             "
                             {translateNumberToCurrencyWords(
                               invoice.grand_total,
                               lang,
                             )}
                             "
-                          </span>
-                        </div>
-                        <div className="hidden">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block font-arabic">
-                            {lang === "ar" ? "قيد الترحيل:" : "Ledger Status:"}
-                          </span>
-                          <span className="font-black text-emerald-600 font-arabic flex items-center justify-end gap-1 font-bold">
-                            ●{" "}
-                            {lang === "ar"
-                              ? "مرحل ومقيد بالخزينة ومخصوم من المخزون"
-                              : "Committed & Synchronized with Stock Registry"}
                           </span>
                         </div>
                       </div>
@@ -5121,96 +5033,99 @@ export default function App() {
               })()
             ) : activePage === "ENTRANCE" ? (
               // ----------------------------------------------------
-              // RECEPTION ROLE DESK PANEL VIEW (DIRECT SPLIT SCREEN)
+              // RECEPTION ROLE DESK PANEL VIEW (2-COLUMN SPLIT SCREEN)
               // ----------------------------------------------------
-              <div className="max-w-4xl mx-auto flex flex-col gap-5 w-full items-stretch animate-fadeIn">
-                {/* Multiple Invoice Sessions / "Kasema" Tabs */}
-                <div className="bg-white rounded border border-slate-200 p-2.5 shadow-3xs flex flex-col gap-2 print:hidden -mb-1">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <div className="flex items-center gap-1.5">
-                      <Coins className="w-4 h-4 text-hospital-blue animate-pulse" />
-                      <h3 className="text-xs font-bold text-slate-800 font-arabic">
-                        {lang === "ar"
-                          ? "إدارة الفواتير النشطة"
-                          : "Active Invoices Management"}
-                      </h3>
-                    </div>
-                    <span className="text-[10px] bg-sky-50 text-hospital-blue font-bold px-2 py-0.5 rounded border border-sky-100 font-arabic select-none">
-                      {sessions.length}{" "}
-                      {lang === "ar" ? "فواتير مفتوحة" : "Active desk sessions"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-thin">
-                    {sessions.map((sess, idx) => {
-                      const isActive = sess.id === activeSessionId;
-                      return (
-                        <div
-                          key={sess.id}
-                          onClick={() => handleSwitchSession(sess.id)}
-                          className={`flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-lg border transition-all cursor-pointer whitespace-nowrap select-none text-xs font-bold ${
-                            isActive
-                              ? "bg-hospital-blue text-white border-hospital-blue shadow-xs animate-fadeIn"
-                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100/75"
-                          }`}
-                        >
-                          <span
-                            className={`font-mono text-[10px] ${isActive ? "text-sky-200" : "text-slate-400"}`}
-                          >
-                            #{idx + 1}
-                          </span>
-                          <span className="font-arabic max-w-[125px] truncate">
-                            {sess.patientName.trim()
-                              ? sess.patientName
-                              : lang === "ar"
-                                ? "فاتورة جديدة فارغة"
-                                : "Unassigned Receipt"}
-                          </span>
-                          {sess.invoiceLines.length > 0 && (
-                            <span
-                              className={`px-1.5 py-0.5 text-[9px] rounded-full font-bold font-mono ${
-                                isActive
-                                  ? "bg-white/20 text-white"
-                                  : "bg-slate-200 text-slate-600"
-                              }`}
-                            >
-                              {sess.invoiceLines.length}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => handleCloseSession(sess.id, e)}
-                            className={`rounded-full p-1.5 transition-all ml-1.5 cursor-pointer shrink-0 border flex items-center justify-center ${
-                              isActive
-                                ? "bg-white/10 hover:bg-white/25 text-white border-transparent"
-                                : "bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 border-slate-200"
-                            }`}
-                            title={
-                              lang === "ar" ? "إغلاق هذه الفاتورة" : "Close tab"
-                            }
-                          >
-                            <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                          </button>
-                        </div>
-                      );
-                    })}
-
-                    {/* Add new tab action button */}
-                    <button
-                      type="button"
-                      onClick={handleNewSession}
-                      className="bg-slate-50 hover:bg-slate-100/80 text-hospital-blue border border-dashed border-slate-300 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer text-xs font-bold font-arabic"
-                    >
-                      <Plus className="w-3.5 h-3.5 animate-pulse" />
-                      <span>
-                        {lang === "ar" ? "فاتورة جديدة +" : "New Tab +"}
+              <div
+                className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 items-start animate-fadeIn"
+                style={{ zoom: 0.9 }}
+              >
+                {/* LEFT COLUMN (Invoices Tabs + Patient Details + Medical Catalog) */}
+                <div className="lg:col-span-7 xl:col-span-7 order-2 lg:order-2 flex flex-col gap-4">
+                  {/* Multiple Invoice Sessions / "Kasema" Tabs */}
+                  <div className="bg-white rounded border border-slate-200 p-2.5 shadow-3xs flex flex-col gap-2 print:hidden">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Coins className="w-4 h-4 text-hospital-blue animate-pulse" />
+                        <h3 className="text-xs font-bold text-slate-800 font-arabic">
+                          {lang === "ar"
+                            ? "إدارة الفواتير النشطة"
+                            : "Active Invoices Management"}
+                        </h3>
+                      </div>
+                      <span className="text-[10px] bg-sky-50 text-hospital-blue font-bold px-2 py-0.5 rounded border border-sky-100 font-arabic select-none">
+                        {sessions.length}{" "}
+                        {lang === "ar" ? "فواتير مفتوحة" : "Active desk sessions"}
                       </span>
-                    </button>
-                  </div>
-                </div>
+                    </div>
 
-                {/* Entry & Catalog & Active Items Form */}
-                <div className="flex flex-col gap-4 w-full">
+                    <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-thin">
+                      {sessions.map((sess, idx) => {
+                        const isActive = sess.id === activeSessionId;
+                        return (
+                          <div
+                            key={sess.id}
+                            onClick={() => handleSwitchSession(sess.id)}
+                            className={`flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-lg border transition-all cursor-pointer whitespace-nowrap select-none text-xs font-bold ${
+                              isActive
+                                ? "bg-hospital-blue text-white border-hospital-blue shadow-xs animate-fadeIn"
+                                : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100/75"
+                            }`}
+                          >
+                            <span
+                              className={`font-mono text-[10px] ${isActive ? "text-sky-200" : "text-slate-400"}`}
+                            >
+                              #{idx + 1}
+                            </span>
+                            <span className="font-arabic max-w-[125px] truncate">
+                              {sess.patientName.trim()
+                                ? sess.patientName
+                                : lang === "ar"
+                                  ? "فاتورة جديدة فارغة"
+                                  : "Unassigned Receipt"}
+                            </span>
+                            {sess.invoiceLines.length > 0 && (
+                              <span
+                                className={`px-1.5 py-0.5 text-[9px] rounded-full font-bold font-mono ${
+                                  isActive
+                                    ? "bg-white/20 text-white"
+                                    : "bg-slate-200 text-slate-600"
+                                }`}
+                              >
+                                {sess.invoiceLines.length}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => handleCloseSession(sess.id, e)}
+                              className={`rounded-full p-1.5 transition-all ml-1.5 cursor-pointer shrink-0 border flex items-center justify-center ${
+                                isActive
+                                  ? "bg-white/10 hover:bg-white/25 text-white border-transparent"
+                                  : "bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 border-slate-200"
+                              }`}
+                              title={
+                                lang === "ar" ? "إغلاق هذه الفاتورة" : "Close tab"
+                              }
+                            >
+                              <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {/* Add new tab action button */}
+                      <button
+                        type="button"
+                        onClick={handleNewSession}
+                        className="bg-slate-50 hover:bg-slate-100/80 text-hospital-blue border border-dashed border-slate-300 px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer text-xs font-bold font-arabic"
+                      >
+                        <Plus className="w-3.5 h-3.5 animate-pulse" />
+                        <span>
+                          {lang === "ar" ? "فاتورة جديدة +" : "New Tab +"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Patient Metadata Invoice Entry Section */}
                   <div className="bg-white rounded border border-slate-250 p-4 md:p-5 shadow-3xs relative overflow-hidden">
                     <div className="absolute top-0 right-0 left-0 h-1 bg-hospital-blue" />
@@ -5383,7 +5298,7 @@ export default function App() {
                     <div className="flex gap-2 items-stretch relative">
                       <div
                         ref={productsContainerRef}
-                        className="max-h-[230px] sm:max-h-[190px] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 pr-1 flex-1 scroll-smooth"
+                        className="max-h-[320px] sm:max-h-[280px] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 pr-1 flex-1 scroll-smooth"
                         style={{
                           scrollbarWidth: "none",
                           msOverflowStyle: "none",
@@ -5512,7 +5427,10 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+                </div>
 
+                {/* RIGHT COLUMN (Itemized Active Invoice Checklist & Total Box & Commit Button) */}
+                <div className="lg:col-span-5 xl:col-span-5 order-1 lg:order-1 flex flex-col gap-4 lg:sticky lg:top-4">
                   {/* Table Checklist display active lines (Audit sheet) */}
                   <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-3xs">
                     <div className="flex items-center justify-between mb-3 border-b border-slate-150 pb-2">
@@ -5718,18 +5636,19 @@ export default function App() {
                       </>
                     )}
 
-                    <div className="bg-sky-50/50 border border-sky-100 rounded-lg p-3.5 mt-2">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <span className="text-slate-500 font-arabic text-xs font-bold">
+                    {/* Bottom Invoice Section - Compact & Sleek Total Banner */}
+                    <div className="bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 border border-sky-400/40 rounded-xl p-3.5 sm:p-4.5 mt-3 shadow-md text-white font-arabic" dir="rtl">
+                      <div className="flex flex-row items-center justify-between gap-2 border-b border-slate-700/60 pb-2.5">
+                        <span className="text-sky-200 font-arabic text-xs sm:text-sm font-black">
                           {lang === "ar"
-                            ? "القيمة المالية الاستحقاقية الإجمالية:"
+                            ? "إجمالي قيمة الاصناف المباعة:"
                             : "Audited Total Sum:"}
                         </span>
-                        <span className="text-lg md:text-xl font-black text-hospital-blue font-mono">
+                        <span className="text-2xl sm:text-3xl md:text-3.5xl font-black text-emerald-400 font-mono tracking-tight drop-shadow-xs">
                           {formatCurrency(calculatedTotals, lang)}
                         </span>
                       </div>
-                      <p className="text-[10px] font-bold text-hospital-blue font-arabic mt-1.5 bg-white/70 p-2 rounded border border-sky-100/50 italic text-right leading-relaxed select-none">
+                      <p className="text-xs sm:text-sm font-extrabold text-slate-900 font-arabic mt-2 bg-white p-2.5 sm:p-3 rounded-lg shadow-xs border border-sky-100 italic text-right leading-snug select-none">
                         "
                         {translateNumberToCurrencyWords(calculatedTotals, lang)}
                         "
@@ -5742,16 +5661,16 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setPendingSaveConfirmation(true)}
-                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-3 text-xs rounded-lg shadow-md transition-all flex items-center justify-center gap-2 font-arabic cursor-pointer active:scale-98 hover:scale-[1.01]"
+                          className="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black p-4 text-sm sm:text-base md:text-lg rounded-xl shadow-lg transition-all flex items-center justify-center gap-3 font-arabic cursor-pointer active:scale-98 hover:scale-[1.01]"
                         >
-                          <Check className="w-4 h-4 animate-bounce" />
-                          <span className="font-semibold text-xs text-white">
-                            {lang === "ar" ? "حفظ الفاتورة" : "Save Invoice"}
+                          <Check className="w-5 h-5 sm:w-6 sm:h-6 animate-bounce" />
+                          <span className="font-black text-sm sm:text-base text-white">
+                            {lang === "ar" ? "حفظ الفاتورة والطباعة" : "Save & Print Invoice"}
                           </span>
                         </button>
                       ) : (
-                        <div className="p-2.5 bg-amber-50 rounded border border-amber-200 text-amber-800 text-[10px] sm:text-xs font-arabic font-bold text-center flex items-center justify-center gap-1.5">
-                          <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-xs sm:text-sm font-arabic font-bold text-center flex items-center justify-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
                           <span>
                             {lang === "ar"
                               ? "المستند غير جاهز للاعتماد، يرجى ملء اسم المريض واختيار صنف واحد على الأقل ورقم إيصال يدوي"
@@ -5929,7 +5848,7 @@ export default function App() {
                   {operators.map((op) => {
                     const opIdentifier = op.username || op.email;
                     const displayFullName = op.fullName || opIdentifier;
-                    const isStaticOnDuty = opIdentifier === "Antonymohab@gmail.com" || opIdentifier === "admin";
+                    const isStaticOnDuty = opIdentifier === "Antonymohab@gmail.com";
                     const formattedDate = new Date(op.joined_at || Date.now())
                       .toISOString()
                       .split("T")[0]
@@ -5940,7 +5859,20 @@ export default function App() {
                         key={opIdentifier}
                         className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          {/* Yellow Pencil Edit Button */}
+                          <button
+                            onClick={() => handleOpenEditOperatorModal(op)}
+                            className="p-1.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 transition-all cursor-pointer shrink-0 shadow-3xs flex items-center justify-center gap-1 font-bold text-xs"
+                            title={
+                              lang === "ar"
+                                ? "تعديل بيانات الحساب (اسم المستخدم / كلمة المرور)"
+                                : "Edit Account Details"
+                            }
+                          >
+                            <Pencil className="w-4 h-4 text-slate-950" />
+                          </button>
+
                           {!isStaticOnDuty && (
                             <button
                               onClick={() => handleDeleteOperator(opIdentifier)}
@@ -5991,7 +5923,127 @@ export default function App() {
                     );
                   })}
                 </div>
+
+                {/* Operator Help Note */}
+                <div className="mt-4 pt-3 border-t border-slate-150 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500 font-arabic">
+                    {lang === "ar"
+                      ? "💡 يمكنك تعديل الحسابات وكلمات المرور مباشرة بالضغط على القلم الأصفر أعلاه."
+                      : "💡 Edit usernames and passwords directly using the yellow pencil buttons above."}
+                  </span>
+                </div>
               </div>
+
+              {/* EDIT OPERATOR ACCOUNT DETAILS MODAL */}
+              {editingOperator && (
+                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn" dir="rtl">
+                  <div className="bg-white border-2 border-amber-400 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 text-right">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2 text-slate-900 font-black text-base font-arabic">
+                        <span className="p-1.5 bg-amber-400 rounded-lg"><Pencil className="w-4 h-4 text-slate-950" /></span>
+                        <span>{lang === "ar" ? "تعديل بيانات الحساب وكلمة المرور" : "Edit Account & Password Details"}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditingOperator(null)}
+                        className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveOperatorEdit} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1 font-arabic">
+                          {lang === "ar" ? "الاسم بالكامل:" : "Full Name:"}
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={editOpFullName}
+                          onChange={(e) => setEditOpFullName(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none font-sans focus:border-amber-500 focus:bg-white transition-all text-right"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1 font-arabic">
+                          {lang === "ar" ? "اسم المستخدم / البريد الإلكتروني (Username):" : "Username / Email:"}
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={editOpUsername}
+                          onChange={(e) => setEditOpUsername(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none font-sans focus:border-amber-500 focus:bg-white transition-all text-right"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1 font-arabic">
+                          {lang === "ar" ? "كلمة المرور الجديدة (اتركها فارغة للإبقاء على الحالية):" : "New Password (leave empty to keep current):"}
+                        </label>
+                        <input
+                          type="password"
+                          value={editOpPassword}
+                          onChange={(e) => setEditOpPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none font-sans focus:border-amber-500 focus:bg-white transition-all text-right"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1 font-arabic">
+                            {lang === "ar" ? "نوع الصلاحية:" : "Role:"}
+                          </label>
+                          <select
+                            value={editOpRole}
+                            onChange={(e) => setEditOpRole(e.target.value as "RECEPTION" | "SUPER_ADMIN")}
+                            className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none font-arabic font-bold focus:border-amber-500 focus:bg-white transition-all cursor-pointer"
+                          >
+                            <option value="RECEPTION">{lang === "ar" ? "🏥 استقبال" : "Reception"}</option>
+                            <option value="SUPER_ADMIN">{lang === "ar" ? "👑 مدير" : "Admin"}</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1 font-arabic">
+                            {lang === "ar" ? "حالة الحساب:" : "Account Status:"}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setEditOpIsActive(!editOpIsActive)}
+                            className={`w-full py-2 px-3 text-xs font-bold font-arabic rounded-xl border transition-all cursor-pointer ${
+                              editOpIsActive
+                                ? "bg-emerald-50 border-emerald-400 text-emerald-700"
+                                : "bg-rose-50 border-rose-400 text-rose-700"
+                            }`}
+                          >
+                            {editOpIsActive ? (lang === "ar" ? "✓ نشط ومصرح" : "Active") : (lang === "ar" ? "✕ معطل" : "Disabled")}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 flex gap-2 justify-end border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => setEditingOperator(null)}
+                          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold font-arabic transition-all cursor-pointer"
+                        >
+                          {lang === "ar" ? "إلغاء" : "Cancel"}
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black font-arabic transition-all cursor-pointer shadow-sm"
+                        >
+                          {lang === "ar" ? "حفظ التعديلات" : "Save Changes"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           ) : activePage === "RESTOCK" ? (
             // ==========================================
@@ -6312,36 +6364,6 @@ export default function App() {
                         </tbody>
                       </table>
                     </div>
-                  </div>
-                </div>
-
-                {/* Manifest Global Parameters: Supplier and Notes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-150">
-                  <div>
-                    <label className="block text-[11.5px] font-black text-slate-700 mb-1.5 font-arabic">
-                      🏛️ جهة التوريد أو الشركة الموردة للشحنة:
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={restockSupplier}
-                      onChange={(e) => setRestockSupplier(e.target.value)}
-                      placeholder=""
-                      className="w-full p-2.5 text-xs border border-slate-250 rounded-xl outline-none text-right font-arabic focus:border-emerald-500 max-w-full font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11.5px] font-black text-slate-700 mb-1.5 font-arabic">
-                      🖊️ ملاحظات ومعلومات رقابية على دفعة الاستلام:
-                    </label>
-                    <input
-                      type="text"
-                      value={restockNotes}
-                      onChange={(e) => setRestockNotes(e.target.value)}
-                      placeholder=""
-                      className="w-full p-2.5 text-xs border border-slate-250 rounded-xl outline-none text-right font-arabic focus:border-emerald-500 max-w-full"
-                    />
                   </div>
                 </div>
 
@@ -7508,7 +7530,7 @@ export default function App() {
                   </div>
                   <div className="flex gap-2">
                     <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
-                      {lang === "ar" ? "المسؤول المالي:" : "Billing Officer:"}
+                      {lang === "ar" ? "موظف المكتب:" : "Desk Officer:"}
                     </span>
                     <span className="font-semibold text-slate-705 bg-white px-2 py-0.5 rounded border border-slate-200 font-arabic">
                       {getUserName(
@@ -7743,8 +7765,8 @@ export default function App() {
                             </span>
                             <span className="text-slate-450 font-bold font-arabic whitespace-nowrap">
                               {lang === "ar"
-                                ? "منفذ الصرف المالي:"
-                                : "Billing Officer:"}
+                                ? "موظف المكتب:"
+                                : "Desk Officer:"}
                             </span>
                           </div>
                         </div>
@@ -7855,123 +7877,141 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="bg-white rounded-xl shadow-2xl border border-slate-250 w-full max-w-md overflow-hidden flex flex-col font-sans"
+              className="bg-white rounded-xl shadow-2xl border border-slate-250 w-full max-w-lg overflow-hidden flex flex-col font-sans"
             >
               {/* Header */}
-              <div className="bg-hospital-blue text-white p-4 flex items-center gap-2">
-                <Coins className="w-5 h-5 animate-pulse" />
-                <h3 className="text-sm font-black font-arabic">
-                  {lang === "ar"
-                    ? "تأكيد فحص المعاملة وحفظ الإيصال"
-                    : "Confirm Receipt & Save Options"}
-                </h3>
+              <div className="bg-hospital-blue text-white p-4 flex items-center justify-between gap-2" dir="rtl">
+                <div className="flex items-center gap-2">
+                  <Coins className="w-5 h-5 animate-pulse" />
+                  <h3 className="text-sm font-black font-arabic">
+                    {lang === "ar"
+                      ? "تأكيد فحص المعاملة وحفظ الإيصال"
+                      : "Confirm Receipt & Save Options"}
+                  </h3>
+                </div>
               </div>
 
               {/* Patient and Financial Breakdown */}
-              <div className="p-5 space-y-3.5 text-right font-arabic">
+              <div className="p-5 space-y-3.5 text-right font-arabic" dir="rtl">
                 <p className="text-xs text-slate-500 leading-relaxed">
                   {lang === "ar"
                     ? "يرجى اختيار طريقة إتمام وحفظ المعاملة بالفاتورة في أرشيف الخزينة والمخزن:"
                     : "Please select your preferred saving & printing option for the checkout register:"}
                 </p>
 
-                <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-200 text-xs space-y-2.5">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-bold">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 text-xs space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-bold">
                       {lang === "ar" ? "اسم المريض:" : "Patient Name:"}
                     </span>
-                    <span className="font-bold text-slate-800">
+                    <span className="font-extrabold text-slate-800 text-sm">
                       {patientName}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-bold">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-bold">
                       {lang === "ar" ? "رقم المرجع اليدوي:" : "Receipt Ref:"}
                     </span>
-                    <span className="font-mono font-bold text-slate-900">
+                    <span className="font-mono font-black text-slate-900 text-sm bg-white px-2 py-0.5 rounded border border-slate-200">
                       {receiptNumber}
                     </span>
                   </div>
                   {/* Total Invoice Amount in a dedicated box - large, bold, and red */}
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex justify-between items-center text-right my-2 shadow-3xs animate-fadeIn">
-                    <span className="text-red-800 font-extrabold text-xs">
+                  <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3.5 flex justify-between items-center text-right my-2 shadow-xs animate-fadeIn">
+                    <span className="text-red-900 font-black text-xs sm:text-sm">
                       {lang === "ar"
                         ? "الحساب الكلي (المستحق):"
                         : "Invoice Total:"}
                     </span>
-                    <span className="font-black text-red-650 font-mono text-xl shrink-0">
+                    <span className="font-black text-red-600 font-mono text-2xl shrink-0">
                       {formatCurrency(calculatedTotals, lang)}
                     </span>
                   </div>
 
-                  {/* Cash Settlement accounting inside the Modal */}
-                  <div className="flex flex-col gap-1.5 border-t border-slate-200/60 pt-2.5">
-                    <label className="block text-[11px] font-black text-slate-650 font-arabic text-right">
-                      {lang === "ar"
-                        ? "المبلغ المستلم من العميل / المريض"
-                        : "Amount Received from Patient"}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        placeholder={
-                          lang === "ar"
-                            ? `${calculatedTotals} ج.م`
-                            : `${calculatedTotals} EGP`
-                        }
-                        value={amountPaid}
-                        onChange={(e) => {
-                          const val =
-                            e.target.value === ""
-                              ? ""
-                              : parseFloat(e.target.value);
-                          setAmountPaid(isNaN(val as number) ? "" : val);
-                        }}
-                        className="w-full px-2.5 py-1.5 text-xs text-right font-mono border border-slate-200 rounded-md focus:border-hospital-blue focus:ring-1 focus:ring-hospital-blue/10 outline-none text-slate-800 transition-all font-arabic font-bold"
-                      />
-                      <span className="absolute left-2.5 top-1.5 font-arabic text-[10px] font-bold text-slate-400">
-                        {lang === "ar" ? "ج.م" : "EGP"}
-                      </span>
+                  {/* Cash Settlement accounting inside the Modal - RTL & Compact */}
+                  <div className="flex flex-col gap-2.5 border-t border-slate-200/80 pt-3 mt-2" dir="rtl">
+                    {/* Amount Received Input */}
+                    <div className="bg-sky-50/90 border border-sky-300/90 rounded-xl p-3 shadow-2xs">
+                      <label className="block text-xs sm:text-sm font-black text-sky-950 font-arabic text-right mb-1.5 flex items-center justify-between">
+                        <span>💵 {lang === "ar" ? "المبلغ المستلم من المريض:" : "Amount Received from Patient:"}</span>
+                        <span className="text-[10px] font-black bg-sky-200 text-sky-900 px-2 py-0.5 rounded-md">
+                          {lang === "ar" ? "مدفوع نقداً" : "Cash Received"}
+                        </span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder={
+                            lang === "ar"
+                              ? `${calculatedTotals} ج.م`
+                              : `${calculatedTotals} EGP`
+                          }
+                          value={amountPaid}
+                          onChange={(e) => {
+                            const val =
+                              e.target.value === ""
+                                ? ""
+                                : parseFloat(e.target.value);
+                            setAmountPaid(isNaN(val as number) ? "" : val);
+                          }}
+                          className="w-full pl-16 pr-3 py-2 text-lg sm:text-xl font-black font-mono text-right border-2 border-sky-400 rounded-lg focus:border-hospital-blue focus:ring-2 focus:ring-sky-200 outline-none text-slate-900 bg-white transition-all shadow-inner font-arabic"
+                          dir="rtl"
+                        />
+                        <span className="absolute left-2.5 font-arabic text-xs font-black text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-300 pointer-events-none">
+                          {lang === "ar" ? "ج.م" : "EGP"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex justify-between border-t border-slate-200/60 pt-2 bg-emerald-50/40 -mx-3.5 px-3.5 py-1">
-                    {amountPaid === "" ? (
-                      <>
-                        <span className="text-emerald-800 font-bold">
-                          {lang === "ar"
-                            ? "المرتجع للمريض / الباقي له (فاضل كام):"
-                            : "Change Due:"}
-                        </span>
-                        <span className="font-black text-emerald-700 font-mono">
-                          {formatCurrency(0, lang)}
-                        </span>
-                      </>
-                    ) : amountPaid >= calculatedTotals ? (
-                      <>
-                        <span className="text-emerald-800 font-bold">
-                          {lang === "ar"
-                            ? "المرتجع للمريض / الباقي له (فاضل كام):"
-                            : "Change Due:"}
-                        </span>
-                        <span className="font-black text-emerald-700 font-mono">
-                          {formatCurrency(amountPaid - calculatedTotals, lang)}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-rose-800 font-bold">
-                          {lang === "ar"
-                            ? "المتبقي غير المدفوع (عجز):"
-                            : "Remaining Unpaid:"}
-                        </span>
-                        <span className="font-black text-rose-700 font-mono">
-                          {formatCurrency(calculatedTotals - amountPaid, lang)}
-                        </span>
-                      </>
-                    )}
+                    {/* Change Due / Unpaid Deficit Box */}
+                    <div className="rounded-xl border border-slate-200 p-2.5 font-arabic shadow-2xs" dir="rtl">
+                      {amountPaid === "" ? (
+                        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-300 p-2.5 rounded-lg">
+                          <span className="text-xs sm:text-sm font-black text-emerald-950">
+                            {lang === "ar"
+                              ? "الباقي له:"
+                              : "Change Due:"}
+                          </span>
+                          <span className="font-black text-emerald-700 font-mono text-lg sm:text-xl">
+                            {formatCurrency(0, lang)}
+                          </span>
+                        </div>
+                      ) : amountPaid >= calculatedTotals ? (
+                        <div className="flex items-center justify-between bg-emerald-100/90 border border-emerald-400 p-2.5 rounded-lg shadow-2xs">
+                          <div>
+                            <span className="text-xs sm:text-sm font-black text-emerald-950 block">
+                              {lang === "ar"
+                                ? "الباقي له:"
+                                : "Change Due:"}
+                            </span>
+                            <span className="text-[10px] text-emerald-800 font-extrabold font-arabic mt-0.5 block">
+                              {lang === "ar" ? "تسوية كاملة ومتبقي للمريض" : "Surplus / Change"}
+                            </span>
+                          </div>
+                          <span className="font-black text-emerald-800 font-mono text-lg sm:text-xl tracking-tight">
+                            {formatCurrency(amountPaid - calculatedTotals, lang)}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between bg-rose-100/90 border border-rose-400 p-2.5 rounded-lg shadow-2xs">
+                          <div>
+                            <span className="text-xs sm:text-sm font-black text-rose-950 block">
+                              {lang === "ar"
+                                ? "المتبقي غير المدفوع (عجز):"
+                                : "Remaining Unpaid:"}
+                            </span>
+                            <span className="text-[10px] text-rose-800 font-extrabold font-arabic mt-0.5 block">
+                              {lang === "ar" ? "تنبيه: المبلغ المدفوع أقل من الإجمالي" : "Underpayment Warning"}
+                            </span>
+                          </div>
+                          <span className="font-black text-rose-800 font-mono text-lg sm:text-xl tracking-tight">
+                            {formatCurrency(calculatedTotals - amountPaid, lang)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

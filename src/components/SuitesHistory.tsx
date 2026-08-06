@@ -92,7 +92,7 @@ export default function SuitesHistory({
           "بيان المستلزمات والكميات والأسعار",
           "إجمالي عدد القطع",
           "إجمالي قيمة الفاتورة (ج.م)",
-          "منفذ الصرف المالي (اسم الحساب)",
+          "موظف المكتب (اسم الحساب)",
           "تنسيق وتظليل الصف"
         ]
       ];
@@ -157,7 +157,7 @@ export default function SuitesHistory({
           "سعر المفرد (ج.م)",
           "الكمية المصروفة",
           "إجمالي البند (ج.م)",
-          "منفذ الصرف المالي (اسم الحساب)",
+          "سامح - موظف المكتب (اسم الحساب)",
           "تنسيق وتظليل الصف"
         ]
       ];
@@ -879,7 +879,7 @@ export default function SuitesHistory({
                   {currentLang === "ar" ? "تاريخ الحفظ" : "Committed Date"}
                 </th>
                 <th className="py-2 px-3 text-slate-500 font-bold font-arabic text-center">
-                  {currentLang === "ar" ? "المسؤول المالي" : "Billing Officer"}
+                  {currentLang === "ar" ? "موظف المكتب" : "Desk Officer"}
                 </th>
                 <th className="py-2 px-3 text-hospital-blue font-bold font-arabic text-center">
                   {currentLang === "ar" ? "القيمة الكلية" : "Grand Total"}
