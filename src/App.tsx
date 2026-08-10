@@ -237,16 +237,27 @@ export default function App() {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {
         console.error("Failed to parse cached operators", e);
       }
     }
     return [
       {
-        email: "Antonymohab@gmail.com",
+        email: "admin",
+        username: "admin",
+        fullName: "مدير النظام (Admin)",
         isActive: true,
         joined_at: new Date().toISOString(),
+        role: "SUPER_ADMIN",
+      },
+      {
+        email: "reception",
+        username: "reception",
+        fullName: "موظف الاستقبال (Reception)",
+        isActive: true,
+        joined_at: new Date().toISOString(),
+        role: "RECEPTION",
       },
     ];
   });
@@ -1254,32 +1265,8 @@ export default function App() {
 
   const triggerBackupDownload = () => {
     const today = new Date().toISOString().split("T")[0];
-    const backupData = {
-      backupVersion: "1.0",
-      generatedAt: new Date().toISOString(),
-      hospitalBranchAr: "مستشفى السلام - ٧٦ احمد عصمت عين شمس",
-      hospitalBranchEn: "El-Salam Hospital - 76 Ahmed Esmat , Ain Shams",
-      inventory,
-      history,
-      operators,
-      itemThresholds,
-      stockThresholds,
-    };
 
-    // 1. Save JSON database backup
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `el_salam_hospital_backup_${today}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    // 2. Save Multi-sheet Excel workbook (.xlsx)
+    // Export Multi-sheet Excel workbook (.xlsx) containing all data
     try {
       const wb = XLSX.utils.book_new();
 
@@ -2988,21 +2975,14 @@ export default function App() {
   };
 
   // Toggle active operators status
-  const handleToggleOperatorStatus = async (email: string) => {
-    // Keep at least one admin operator active for safety
-    if (email === "Antonymohab@gmail.com") {
-      setSaveSuccessMessage(
-        lang === "ar"
-          ? "⚠️ غير مسموح بتعطيل حساب المالك الأساسي!"
-          : "⚠️ Cannot disable critical owner profile!",
-      );
-      setTimeout(() => setSaveSuccessMessage(null), 3000);
-      return;
-    }
-
+  const handleToggleOperatorStatus = async (emailOrUsername: string) => {
+    const cleanId = emailOrUsername.toLowerCase();
     let newActive = true;
     const updated = operators.map((op) => {
-      if (op.email === email || op.username === email) {
+      if (
+        (op.email && op.email.toLowerCase() === cleanId) ||
+        (op.username && op.username.toLowerCase() === cleanId)
+      ) {
         newActive = !op.isActive;
         return { ...op, isActive: newActive };
       }
@@ -3011,18 +2991,22 @@ export default function App() {
     saveOperatorsToCache(updated);
 
     if (isSupabaseConfigured) {
-      await toggleSupabaseAppUserActive(email, newActive);
+      await toggleSupabaseAppUserActive(emailOrUsername, newActive);
     }
   };
 
   // Delete operator
-  const handleDeleteOperator = async (email: string) => {
-    if (email === "Antonymohab@gmail.com") return;
-    const updated = operators.filter((op) => op.email !== email && op.username !== email);
+  const handleDeleteOperator = async (emailOrUsername: string) => {
+    const cleanId = emailOrUsername.toLowerCase();
+    const updated = operators.filter(
+      (op) =>
+        (op.email ? op.email.toLowerCase() !== cleanId : true) &&
+        (op.username ? op.username.toLowerCase() !== cleanId : true)
+    );
     saveOperatorsToCache(updated);
 
     if (isSupabaseConfigured) {
-      await deleteSupabaseAppUser(email);
+      await deleteSupabaseAppUser(emailOrUsername);
     }
   };
 
@@ -3041,7 +3025,11 @@ export default function App() {
     const passTrimmed = loginPassword.trim();
 
     if (!inputTrimmed || !passTrimmed) {
-      setLoginError("❌ يرجى إدخال اسم المستخدم ورمز المرور!");
+      setLoginError(
+        lang === "ar"
+          ? "❌ يرجى إدخال اسم المستخدم ورمز المرور!"
+          : "❌ Please enter username and password!"
+      );
       return;
     }
 
@@ -3085,13 +3073,25 @@ export default function App() {
     // 2. Fallback Local Authentication
     const normalized = inputTrimmed.toLowerCase();
 
-    // Check if operator account is deactivated locally
+    // Look up account in local operators list
     const matchingOp = operators.find(
       (op) =>
         (op.email && op.email.toLowerCase() === normalized) ||
         (op.username && op.username.toLowerCase() === normalized)
     );
-    if (matchingOp && matchingOp.isActive === false) {
+
+    // If account was deleted or doesn't exist in operators list, deny access!
+    if (!matchingOp) {
+      setLoginError(
+        lang === "ar"
+          ? "❌ اسم المستخدم أو رمز المرور غير صحيح!"
+          : "❌ Invalid username or password!"
+      );
+      return;
+    }
+
+    // Check if operator account is deactivated locally
+    if (matchingOp.isActive === false) {
       setLoginError(
         lang === "ar"
           ? "⛔ تم تعطيل هذا الحساب بقرار الإدارة. يرجى مراجعة مدير النظام."
@@ -3100,62 +3100,63 @@ export default function App() {
       return;
     }
 
-    // Admin Account check
-    const isSuperAdmin =
-      normalized === "admin" ||
-      normalized === "admin_salam" ||
-      normalized === "antonymohab@gmail.com";
-
-    if (isSuperAdmin) {
+    // Verify credentials based on role
+    if (matchingOp.role === "SUPER_ADMIN") {
       if (passTrimmed === "admin123") {
         const userObj = {
-          username: "admin",
-          email: "admin",
+          username: matchingOp.username || matchingOp.email,
+          email: matchingOp.email,
           role: "SUPER_ADMIN" as const,
         };
         setCurrentUser(userObj);
         localStorage.setItem("el_salam_er_auth_v1", JSON.stringify(userObj));
         setActivePage("ADMIN");
-        setSaveSuccessMessage("✓ مرحبًا بك يا مدير النظام (admin). تم تأكيد الهوية.");
+        setSaveSuccessMessage(
+          lang === "ar"
+            ? `✓ مرحبًا بك يا مدير النظام (${userObj.username}). تم تأكيد الهوية.`
+            : `✓ Welcome System Administrator (${userObj.username}).`
+        );
         setTimeout(() => setSaveSuccessMessage(null), 3000);
         setLoginUsername("");
         setLoginEmail("");
         setLoginPassword("");
       } else {
-        setLoginError("❌ رمز مرور مدير النظام غير صحيح!");
+        setLoginError(
+          lang === "ar"
+            ? "❌ رمز مرور مدير النظام غير صحيح!"
+            : "❌ Incorrect administrator password!"
+        );
       }
       return;
-    }
-
-    // Reception Operator check
-    const isReception =
-      normalized === "reception" ||
-      normalized === "reception1" ||
-      normalized === "reception1@salam.com" ||
-      !!matchingOp;
-
-    if (isReception) {
+    } else {
+      // RECEPTION operator
       if (passTrimmed === "reception123") {
         const userObj = {
-          username: inputTrimmed,
-          email: inputTrimmed,
+          username: matchingOp.username || matchingOp.email,
+          email: matchingOp.email,
           role: "RECEPTION" as const,
         };
         setCurrentUser(userObj);
         localStorage.setItem("el_salam_er_auth_v1", JSON.stringify(userObj));
         setActivePage("ENTRANCE");
-        setSaveSuccessMessage(`✓ مرحبًا بك بوردية الاستقبال (${inputTrimmed}). تم تسجيل الحضور.`);
+        setSaveSuccessMessage(
+          lang === "ar"
+            ? `✓ مرحبًا بك بوردية الاستقبال (${userObj.username}). تم تسجيل الحضور.`
+            : `✓ Welcome Reception Operator (${userObj.username}).`
+        );
         setTimeout(() => setSaveSuccessMessage(null), 3000);
         setLoginUsername("");
         setLoginEmail("");
         setLoginPassword("");
       } else {
-        setLoginError("❌ رمز مرور موظف الاستقبال غير صحيح!");
+        setLoginError(
+          lang === "ar"
+            ? "❌ رمز مرور موظف الاستقبال غير صحيح!"
+            : "❌ Incorrect reception password!"
+        );
       }
       return;
     }
-
-    setLoginError("❌ اسم المستخدم أو رمز المرور غير صحيح!");
   };
 
   // Visible history records filtered by logged-in receptionist shift / account
@@ -4266,82 +4267,84 @@ export default function App() {
               </div>
             </div>
           ) : activePage === "ADD_PRODUCT" ? (
-            <div className="max-w-xl mx-auto w-full bg-white border border-slate-205 rounded-2xl shadow-sm p-6 text-right animate-fadeIn overflow-hidden" dir="rtl">
-              {/* Browser-style Tab Bar */}
-              <div className="flex items-end bg-slate-100/90 px-2 pt-2 border border-slate-200 rounded-t-2.2xl -mx-6 -mt-6 mb-6">
+            <div className="max-w-2xl mx-auto w-full bg-white border border-slate-300 rounded-3xl shadow-xs p-6 sm:p-8 text-right animate-fadeIn overflow-hidden" dir="rtl">
+              {/* Browser-style Tab Bar matching Screenshot 3 */}
+              <div className="flex items-end bg-[#f1f5f9] px-3 pt-3 border-b border-slate-250 rounded-t-3xl -mx-6 sm:-mx-8 -mt-6 sm:-mt-8 mb-6 gap-2">
                 <button
                   type="button"
                   onClick={() => setAddItemTab("PRODUCT")}
-                  className={`relative flex items-center gap-1.5 px-4 py-2 text-xs font-black font-arabic transition-all select-none cursor-pointer rounded-t-xl border-t border-x ${
+                  className={`flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-black font-arabic select-none cursor-pointer rounded-t-2xl transition-all border-t border-x ${
                     addItemTab === "PRODUCT"
-                      ? "bg-white border-slate-200 text-slate-800 translate-y-[1px] shadow-xs z-10 font-bold"
-                      : "bg-transparent border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
+                      ? "bg-white border-slate-300 text-slate-900 translate-y-[1px] shadow-2xs z-10"
+                      : "bg-transparent border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                   }`}
                 >
-                  <span className="text-emerald-600">💊</span>
+                  <span className="text-base">💊</span>
                   <span>{lang === "ar" ? "إضافة دواء / صنف جديد" : "Add Medicine / Product"}</span>
-                  {addItemTab === "PRODUCT" && <span className="text-[9px] text-slate-400 ml-1">×</span>}
+                  {addItemTab === "PRODUCT" && <span className="text-slate-400 text-xs ml-1 font-sans">×</span>}
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setAddItemTab("CATEGORY")}
-                  className={`relative flex items-center gap-1.5 px-4 py-2 text-xs font-black font-arabic transition-all select-none cursor-pointer rounded-t-xl border-t border-x ${
+                  className={`flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-black font-arabic select-none cursor-pointer rounded-t-2xl transition-all border-t border-x ${
                     addItemTab === "CATEGORY"
-                      ? "bg-white border-slate-200 text-slate-800 translate-y-[1px] shadow-xs z-10 font-bold"
-                      : "bg-transparent border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
+                      ? "bg-white border-slate-300 text-slate-900 translate-y-[1px] shadow-2xs z-10"
+                      : "bg-transparent border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                   }`}
                 >
-                  <span className="text-hospital-blue">📁</span>
+                  <span className="text-base">📁</span>
                   <span>{lang === "ar" ? "إنشاء فئة طبية مستقلة" : "Create New Category"}</span>
-                  {addItemTab === "CATEGORY" && <span className="text-[9px] text-slate-400 ml-1">×</span>}
+                  {addItemTab === "CATEGORY" && <span className="text-slate-400 text-xs ml-1 font-sans">×</span>}
                 </button>
               </div>
 
-              {/* Title Section based on Active Tab */}
-              <div className="flex items-center justify-between border-b border-slate-150 pb-4 mb-5">
+              {/* Title Header & Back Button matching Screenshot 3 */}
+              <div className="flex items-center justify-between gap-4 mb-4">
+                {/* Back button on right or left according to layout */}
                 <button
                   type="button"
                   onClick={() => setActivePage("RESTOCK")}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors font-arabic flex items-center gap-1.5 cursor-pointer border border-slate-200"
+                  className="bg-[#f1f5f9] hover:bg-slate-200 text-slate-800 font-extrabold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-colors font-arabic flex items-center gap-2 cursor-pointer border border-slate-250 shadow-3xs shrink-0"
                 >
-                  <ArrowRight className="w-3.5 h-3.5" />
                   <span>{lang === "ar" ? "رجوع إلى التوريد" : "Back to Restock"}</span>
+                  <span className="text-sm">➔</span>
                 </button>
+
                 <div className="text-right">
-                  <h3 className="text-sm md:text-base font-black text-slate-800 font-arabic flex items-center justify-end gap-1.5">
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 font-arabic flex items-center justify-end gap-2">
                     {addItemTab === "PRODUCT" ? (
                       <>
-                        <span>💊</span> {lang === "ar" ? "إضافة صنف طبي جديد" : "Add New Medical Item"}
+                        <span>إضافة دواء / صنف جديد</span>
+                        <span className="text-lg">💊</span>
                       </>
                     ) : (
                       <>
-                        <span>📁</span> {lang === "ar" ? "إضافة فئة طبية مستقلة" : "Add Standalone Category"}
+                        <span>إضافة فئة طبية مستقلة</span>
+                        <span className="text-lg">📁</span>
                       </>
                     )}
                   </h3>
-                  <p className="text-[10px] text-slate-400 font-arabic mt-0.5">
-                    {addItemTab === "PRODUCT"
-                      ? (lang === "ar" ? "تسجيل صنف طبي جديد لتوسيع قاعدة المستلزمات" : "Create a new medical supply sequence")
-                      : (lang === "ar" ? "إنشاء فئة طبية جديدة لتصنيف الأدوية والمستلزمات بداخلها" : "Create a standalone category without items")}
-                  </p>
                 </div>
               </div>
 
+              <hr className="border-slate-200/90 my-4" />
+
               {addItemTab === "PRODUCT" ? (
                 /* Form Component for Products */
-                <form onSubmit={handleAddNewItem} className="space-y-4">
+                <form onSubmit={handleAddNewItem} className="space-y-5">
                   {/* ID input */}
                   <div>
-                    <label className="block text-xs font-black text-slate-700 mb-1.5 font-arabic">
+                    <label className="block text-xs sm:text-sm font-extrabold text-slate-900 mb-2 font-arabic">
                       🔑 {lang === "ar" ? "كود الصنف الطبي (ID تلقائي مميز):" : "Medical Item Code (Auto ID):"}
                     </label>
                     <input
                       type="text"
                       value={generateNextMedId(inventory)}
                       disabled
-                      className="w-full px-3 py-2 text-xs md:text-sm bg-slate-100 border border-slate-200 rounded-lg outline-none text-right font-sans text-slate-500 cursor-not-allowed font-semibold"
+                      className="w-full px-4 py-3 text-sm bg-slate-100 border border-slate-300 rounded-2xl outline-none text-center font-mono text-slate-600 cursor-not-allowed font-bold"
                     />
-                    <p className="text-[9.5px] text-emerald-600 font-extrabold mt-1 font-arabic animate-pulse">
+                    <p className="text-[10.5px] text-emerald-700 font-extrabold mt-1.5 font-arabic">
                       {lang === "ar" ? `* تم قفل تعديل الكود يدوياً لضمان التسلسل التلقائي السليم (سيبدأ من ${generateNextMedId(inventory)}).` : `* Manual editing is locked to ensure automatic sequential numbering (starts from ${generateNextMedId(inventory)}).`}
                     </p>
                   </div>
@@ -4349,7 +4352,7 @@ export default function App() {
                   {/* Name validation inputs */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-black text-slate-700 mb-1.5 font-arabic">
+                      <label className="block text-xs sm:text-sm font-extrabold text-slate-900 mb-2 font-arabic">
                         🏷️ {lang === "ar" ? "الاسم العربي للطبية:" : "Arabic Name:"}
                       </label>
                       <input
@@ -4357,16 +4360,15 @@ export default function App() {
                         value={newItemNameAr}
                         onChange={(e) => {
                           const val = e.target.value;
-                          // Block English alphabetical letters [a-zA-Z]
                           const sanitized = val.replace(/[a-zA-Z]/g, "");
                           setNewItemNameAr(sanitized);
                         }}
                         placeholder="مثال: سرنجة أنسولين معقمة"
-                        className="w-full px-3 py-2 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none text-right font-arabic focus:border-emerald-500 transition-all focus:bg-white placeholder-slate-400"
+                        className="w-full px-4 py-3 text-sm bg-white border border-slate-300 rounded-2xl outline-none text-right font-arabic focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder-slate-400 font-bold"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-black text-slate-700 mb-1.5 font-arabic text-left animate-fadeIn" dir="ltr">
+                      <label className="block text-xs sm:text-sm font-extrabold text-slate-900 mb-2 font-arabic text-left" dir="ltr">
                         🏷️ {lang === "ar" ? "الاسم الإنجليزي للطبية:" : "English Name:"}
                       </label>
                       <input
@@ -4374,12 +4376,11 @@ export default function App() {
                         value={newItemNameEn}
                         onChange={(e) => {
                           const val = e.target.value;
-                          // Block Arabic Unicode script ranges
                           const sanitized = val.replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g, "");
                           setNewItemNameEn(sanitized);
                         }}
                         placeholder="e.g. Sterile Insulin Syringe"
-                        className="w-full px-3 py-2 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none text-left font-sans focus:border-emerald-500 transition-all focus:bg-white placeholder-slate-400"
+                        className="w-full px-4 py-3 text-sm bg-white border border-slate-300 rounded-2xl outline-none text-left font-sans focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder-slate-400 font-bold"
                         dir="ltr"
                       />
                     </div>
@@ -4387,25 +4388,25 @@ export default function App() {
 
                   {/* Category Radio selection: existing vs new category */}
                   <div>
-                    <label className="block text-xs font-black text-slate-700 mb-2 font-arabic">
+                    <label className="block text-xs sm:text-sm font-extrabold text-slate-900 mb-2 font-arabic">
                       📁 {lang === "ar" ? "نوع الفئة الطبية:" : "Category Specification:"}
                     </label>
-                    <div className="flex gap-4 p-2 bg-slate-50 border border-slate-200 rounded-lg">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold font-arabic">
+                    <div className="flex gap-6 p-3 bg-slate-50 border border-slate-250 rounded-2xl">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-bold font-arabic">
                         <input
                           type="radio"
                           checked={newItemCategoryType === "existing"}
                           onChange={() => setNewItemCategoryType("existing")}
-                          className="text-emerald-600 focus:ring-emerald-500"
+                          className="text-emerald-600 focus:ring-emerald-500 w-4 h-4"
                         />
                         <span>{lang === "ar" ? "اختيار فئة حالية" : "Select Existing Category"}</span>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold font-arabic">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-bold font-arabic">
                         <input
                           type="radio"
                           checked={newItemCategoryType === "new"}
                           onChange={() => setNewItemCategoryType("new")}
-                          className="text-emerald-600 focus:ring-emerald-500"
+                          className="text-emerald-600 focus:ring-emerald-500 w-4 h-4"
                         />
                         <span>{lang === "ar" ? "إنشاء فئة جديدة +" : "Create New Category +"}</span>
                       </label>
@@ -4415,13 +4416,13 @@ export default function App() {
                   {/* Category selectors depend on type */}
                   {newItemCategoryType === "existing" ? (
                     <div>
-                      <label className="block text-xs font-black text-slate-700 mb-1.5 font-arabic">
+                      <label className="block text-xs sm:text-sm font-extrabold text-slate-900 mb-2 font-arabic">
                         📂 {lang === "ar" ? "حدد الفئة الطبية الحالية:" : "Select Existing Category List:"}
                       </label>
                       <select
                         value={newItemCategoryAr}
                         onChange={(e) => setNewItemCategoryAr(e.target.value)}
-                        className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none font-arabic focus:border-emerald-500 transition-all text-slate-800"
+                        className="w-full px-4 py-3 text-sm bg-white border border-slate-300 rounded-2xl outline-none font-arabic focus:border-emerald-500 transition-all text-slate-900 font-bold cursor-pointer"
                       >
                         <option value="">-- {lang === "ar" ? "اختر فئة من المجموعة" : "Choose a Category"} --</option>
                         {distinctCategories.map((cat) => (
@@ -4432,9 +4433,9 @@ export default function App() {
                       </select>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-slate-200 p-3 rounded-lg bg-emerald-50/20 animate-fadeIn">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-slate-200 p-4 rounded-2xl bg-emerald-50/20 animate-fadeIn">
                       <div>
-                        <label className="block text-xs font-black text-slate-700 mb-1.5 font-arabic">
+                        <label className="block text-xs font-bold text-slate-800 mb-1.5 font-arabic">
                           📁 {lang === "ar" ? "اسم الفئة الجديدة (بالعربية):" : "New Category (Arabic):"}
                         </label>
                         <input
@@ -4442,11 +4443,11 @@ export default function App() {
                           value={newItemCategoryAr}
                           onChange={(e) => setNewItemCategoryAr(e.target.value)}
                           placeholder="مثال: فحص طبي وتحاليل طارئة"
-                          className="w-full px-3 py-2 text-xs md:text-sm bg-white border border-slate-200 rounded-lg outline-none text-right font-arabic focus:border-emerald-500"
+                          className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl outline-none text-right font-arabic focus:border-emerald-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-black text-slate-755 mb-1.5 font-arabic text-left" dir="ltr">
+                        <label className="block text-xs font-bold text-slate-800 mb-1.5 font-arabic text-left" dir="ltr">
                           📁 {lang === "ar" ? "اسم الفئة الجديدة (بالإنجليزية):" : "New Category (English):"}
                         </label>
                         <input
@@ -4454,7 +4455,7 @@ export default function App() {
                           value={newItemCategoryEn}
                           onChange={(e) => setNewItemCategoryEn(e.target.value)}
                           placeholder="e.g. Clinical Diagnostics"
-                          className="w-full px-3 py-2 text-xs md:text-sm bg-white border border-slate-200 rounded-lg outline-none text-left font-sans focus:border-emerald-500"
+                          className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl outline-none text-left font-sans focus:border-emerald-500"
                           dir="ltr"
                         />
                       </div>
@@ -4464,7 +4465,7 @@ export default function App() {
                   {/* Price and Stock Inputs */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-black text-slate-707 mb-1.5 font-arabic">
+                      <label className="block text-xs sm:text-sm font-extrabold text-slate-900 mb-2 font-arabic">
                         💵 {lang === "ar" ? "سعر الوحدة بالجنيه المصري (EGP):" : "Unit Tariff Price (EGP):"}{" "}
                         {newItemUnitPrice && (
                           <span className="text-emerald-600 font-extrabold font-arabic">({newItemUnitPrice} ج م)</span>
@@ -4479,15 +4480,15 @@ export default function App() {
                           value={newItemUnitPrice}
                           onChange={(e) => setNewItemUnitPrice(e.target.value)}
                           placeholder="0.00"
-                          className="w-full pl-12 pr-3 py-2 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none text-right font-mono focus:border-emerald-500 transition-all focus:bg-white placeholder-slate-400"
+                          className="w-full pl-14 pr-4 py-3 text-sm bg-white border border-slate-300 rounded-2xl outline-none text-right font-mono focus:border-emerald-500 transition-all placeholder-slate-400 font-bold"
                         />
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-slate-400 pointer-events-none font-arabic">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 pointer-events-none font-arabic">
                           ج م
                         </div>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-black text-slate-707 mb-1.5 font-arabic">
+                      <label className="block text-xs sm:text-sm font-extrabold text-slate-900 mb-2 font-arabic">
                         📦 {lang === "ar" ? "الرصيد الابتدائي المتوفر بالمستودع:" : "Initial Physical Stock Level:"}
                       </label>
                       <input
@@ -4497,18 +4498,18 @@ export default function App() {
                         value={newItemInitialStock}
                         onChange={(e) => setNewItemInitialStock(e.target.value)}
                         placeholder="0"
-                        className="w-full px-3 py-2 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none text-right font-mono focus:border-emerald-500 transition-all focus:bg-white placeholder-slate-400"
+                        className="w-full px-4 py-3 text-sm bg-white border border-slate-300 rounded-2xl outline-none text-right font-mono focus:border-emerald-500 transition-all placeholder-slate-400 font-bold"
                       />
                     </div>
                   </div>
 
                   {/* Submit items */}
-                  <div className="pt-4 flex gap-3 border-t border-slate-150">
+                  <div className="pt-4 flex items-center gap-3 border-t border-slate-200">
                     <button
                       type="submit"
-                      className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all cursor-pointer font-arabic flex items-center justify-center gap-1.5 shadow-sm active:scale-98"
+                      className="flex-1 py-3 px-6 bg-[#059669] hover:bg-[#047857] text-white rounded-2xl font-black font-arabic text-sm transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
                     >
-                      <Plus className="w-4 h-4 shrink-0" />
+                      <Plus className="w-5 h-5 shrink-0" />
                       <span>{lang === "ar" ? "تأكيد وإضافة الصنف" : "Add Medical Item to Live Stock"}</span>
                     </button>
                     <button
@@ -4523,25 +4524,28 @@ export default function App() {
                         setNewItemInitialStock("0");
                         setActivePage("RESTOCK");
                       }}
-                      className="py-2.5 px-4 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl text-slate-705 text-xs font-bold font-arabic transition-all cursor-pointer active:scale-98"
+                      className="py-3 px-6 bg-white hover:bg-slate-50 border border-slate-300 rounded-2xl text-slate-800 text-xs sm:text-sm font-black font-arabic transition-all cursor-pointer"
                     >
-                      {lang === "ar" ? "إلغاء التراجع" : "Cancel"}
+                      {lang === "ar" ? "إلغاء والتراجع" : "Cancel"}
                     </button>
                   </div>
                 </form>
               ) : (
-                /* Standalone Category Creation Form */
-                <form onSubmit={handleAddNewCategory} className="space-y-4 animate-fadeIn">
-                  <div className="bg-emerald-50/20 border border-emerald-100 p-3 rounded-lg">
-                    <p className="text-[11px] text-slate-500 font-arabic leading-relaxed">
+                /* Standalone Category Creation Form matching Screenshot 3 */
+                <form onSubmit={handleAddNewCategory} className="space-y-6 animate-fadeIn">
+                  {/* Alert Tip Box */}
+                  <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-2xl p-4 sm:p-5 flex items-start gap-3 text-right">
+                    <span className="text-emerald-700 text-xl shrink-0 mt-0.5">💡</span>
+                    <p className="text-[#166534] font-arabic text-xs sm:text-sm font-semibold leading-relaxed">
                       {lang === "ar" 
-                        ? "💡 تتيح لك هذه الصفحة إنشاء فئة مستقلة في المنظومة مباشرة دون دواء. ستظهر هذه الفئة فوراً في جميع القوائم المنسدلة بالفواتير."
-                        : "💡 This panel allows creating standalone medical groups or classifications. Once registered, they appear immediately across billing select options."}
+                        ? "تتيح لك هذه الصفحة إنشاء فئة مستقلة في المنظومة مباشرة دون دواء. ستظهر هذه الفئة فوراً في جميع القوائم المنسدلة بالفواتير."
+                        : "This panel allows creating standalone medical groups or classifications. Once registered, they appear immediately across billing select options."}
                     </p>
                   </div>
 
+                  {/* Name Arabic */}
                   <div>
-                    <label className="block text-xs font-black text-slate-700 mb-1.5 font-arabic">
+                    <label className="block text-xs sm:text-sm font-extrabold text-slate-900 mb-2 font-arabic text-right">
                       📁 {lang === "ar" ? "اسم الفئة الطبية الجديدة بالعربية:" : "New Category (Arabic):"}
                     </label>
                     <input
@@ -4550,13 +4554,14 @@ export default function App() {
                       value={newCatNameAr}
                       onChange={(e) => setNewCatNameAr(e.target.value)}
                       placeholder="مثال: مستهلكات جراحية دقيقة"
-                      className="w-full px-3 py-2.5 text-xs md:text-sm bg-slate-50 border border-slate-205 rounded-lg outline-none text-right font-arabic focus:border-emerald-500 focus:bg-white transition-all placeholder-slate-400"
+                      className="w-full px-4 py-3 text-sm bg-white border border-slate-300 rounded-2xl outline-none text-right font-arabic focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder-slate-400 font-bold shadow-3xs"
                     />
                   </div>
 
+                  {/* Name English */}
                   <div>
-                    <label className="block text-xs font-black text-slate-700 mb-1.5 font-arabic text-left animate-fadeIn" dir="ltr">
-                      📁 {lang === "ar" ? "اسم الفئة الطبية الجديدة بالإنجليزية:" : "New Category (English):"}
+                    <label className="block text-xs sm:text-sm font-extrabold text-slate-900 mb-2 font-arabic text-right">
+                      📁 {lang === "ar" ? ":اسم الفئة الطبية الجديدة بالإنجليزي" : "New Category (English):"}
                     </label>
                     <input
                       type="text"
@@ -4564,17 +4569,20 @@ export default function App() {
                       value={newCatNameEn}
                       onChange={(e) => setNewCatNameEn(e.target.value)}
                       placeholder="e.g. Fine Surgical Items"
-                      className="w-full px-3 py-2.5 text-xs md:text-sm bg-slate-50 border border-slate-205 rounded-lg outline-none text-left font-sans focus:border-emerald-500 focus:bg-white transition-all placeholder-slate-400"
+                      className="w-full px-4 py-3 text-sm bg-white border border-slate-300 rounded-2xl outline-none text-left font-sans focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder-slate-400 font-bold shadow-3xs"
                       dir="ltr"
                     />
                   </div>
 
-                  <div className="pt-4 flex gap-3 border-t border-slate-150">
+                  <hr className="border-slate-200/90 my-5" />
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-3">
                     <button
                       type="submit"
-                      className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all cursor-pointer font-arabic flex items-center justify-center gap-1.5 shadow-sm active:scale-98"
+                      className="flex-1 py-3.5 px-6 bg-[#059669] hover:bg-[#047857] text-white rounded-2xl font-black font-arabic text-sm transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
                     >
-                      <Plus className="w-4 h-4 shrink-0" />
+                      <span className="text-lg">+</span>
                       <span>{lang === "ar" ? "تأكيد إضافة الفئة الطبية" : "Confirm & Create Category"}</span>
                     </button>
                     <button
@@ -4584,22 +4592,28 @@ export default function App() {
                         setNewCatNameEn("");
                         setAddItemTab("PRODUCT");
                       }}
-                      className="py-2.5 px-4 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl text-slate-705 text-xs font-bold font-arabic transition-all cursor-pointer active:scale-98"
+                      className="py-3.5 px-6 bg-white hover:bg-slate-50 border border-slate-300 rounded-2xl text-slate-800 text-xs sm:text-sm font-black font-arabic transition-all cursor-pointer shadow-3xs"
                     >
                       {lang === "ar" ? "إلغاء الفئة" : "Cancel"}
                     </button>
                   </div>
 
-                  {/* Visual list of currently loaded categories */}
-                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 mt-4">
-                    <h4 className="text-xs font-black text-slate-700 font-arabic mb-2 flex items-center gap-1">
-                      <span>📂</span> {lang === "ar" ? "الفئات المسجلة حالياً:" : "Currently Registered Groups:"}
+                  {/* Currently Registered Categories Chips Box matching Screenshot 3 */}
+                  <div className="bg-[#f8fafc] border border-slate-200/90 rounded-2xl p-5 sm:p-6 space-y-4 mt-6 text-right">
+                    <h4 className="text-xs sm:text-sm font-black text-slate-900 font-arabic flex items-center gap-1.5 justify-start">
+                      <span>📁</span>
+                      <span>{lang === "ar" ? "الفئات المسجلة حالياً:" : "Currently Registered Groups:"}</span>
                     </h4>
-                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                    <div className="flex flex-wrap gap-2 text-right justify-start">
                       {distinctCategories.map((cat, idx) => (
-                        <div key={idx} className="bg-white border border-slate-200 px-2 py-0.5 rounded text-[10px] font-arabic text-slate-700">
-                          <span className="font-extrabold">{lang === "ar" ? cat.ar : cat.en}</span>
-                          <span className="text-slate-400"> ({lang === "ar" ? cat.en : cat.ar})</span>
+                        <div
+                          key={idx}
+                          className="bg-white border border-slate-250 text-slate-800 font-arabic font-extrabold px-3.5 py-1.5 rounded-xl text-xs shadow-3xs flex items-center justify-center gap-1.5"
+                        >
+                          <span>{lang === "ar" ? cat.ar : cat.en}</span>
+                          <span className="text-slate-400 font-normal font-sans">
+                            ({lang === "ar" ? cat.en : cat.ar})
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -4961,14 +4975,14 @@ export default function App() {
                               </th>
                               <th className="py-2.5 px-3 text-right border-r border-slate-300">
                                 {lang === "ar"
-                                  ? "المستلزم الطبي المستهلك"
+                                  ? "اسم الصنف"
                                   : "Medical Item / Supply"}
                               </th>
                               <th className="py-2.5 px-3 text-center border-r border-slate-300">
                                 {lang === "ar" ? "سعر الوحدة" : "Unit Price"}
                               </th>
                               <th className="py-2.5 px-3 text-center border-r border-slate-300 w-16">
-                                {lang === "ar" ? "الكمية" : "Qty"}
+                                {lang === "ar" ? "العدد" : "Qty"}
                               </th>
                               <th className="py-2.5 px-3 text-left">
                                 {lang === "ar"
@@ -5515,7 +5529,7 @@ export default function App() {
                                 {/* Stepper */}
                                 <div className="flex flex-col items-center">
                                   <span className="text-[9.5px] text-slate-500 font-arabic font-medium mb-0.5">
-                                    {lang === "ar" ? "الكمية" : "Qty"}
+                                    {lang === "ar" ? "العدد" : "Qty"}
                                   </span>
                                   <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-0.5 shadow-3xs">
                                     <button
@@ -5559,14 +5573,14 @@ export default function App() {
                               <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 text-right">
                                 <th className="py-2 px-1.5 sm:px-3 font-black font-arabic text-right whitespace-nowrap">
                                   {lang === "ar"
-                                    ? "المستلزم الطبي"
+                                    ? "اسم الصنف"
                                     : "Medical Supply"}
                                 </th>
                                 <th className="py-2 px-1.5 sm:px-3 font-black font-arabic text-center whitespace-nowrap">
                                   {lang === "ar" ? "سعر المفرد" : "Tariff"}
                                 </th>
                                 <th className="py-2 px-1.5 sm:px-3 font-black font-arabic text-center whitespace-nowrap">
-                                  {lang === "ar" ? "الكمية" : "Qty"}
+                                  {lang === "ar" ? "العدد" : "Qty"}
                                 </th>
                                 <th className="py-2 px-1.5 sm:px-3 font-black font-arabic text-center whitespace-nowrap">
                                   {lang === "ar" ? "الإجمالي" : "Subtotal"}
@@ -7571,14 +7585,14 @@ export default function App() {
                       </th>
                       <th className="py-2.5 px-3 text-right font-arabic border-r border-slate-300">
                         {lang === "ar"
-                          ? "المستلزم الطبي"
+                          ? "اسم الصنف"
                           : "Medical Item / Supply"}
                       </th>
                       <th className="py-2.5 px-3 text-center font-arabic border-r border-slate-300">
                         {lang === "ar" ? "سعر المفرد" : "Unit Price"}
                       </th>
                       <th className="py-2.5 px-3 text-center font-arabic border-r border-slate-300 w-16">
-                        {lang === "ar" ? "الكمية" : "Qty"}
+                        {lang === "ar" ? "العدد" : "Qty"}
                       </th>
                       <th className="py-2.5 px-3 text-left font-arabic">
                         {lang === "ar" ? "الإجمالي" : "Total Price"}
@@ -7799,14 +7813,14 @@ export default function App() {
                               </th>
                               <th className="py-2.5 px-3 text-right font-arabic border-r border-slate-300">
                                 {lang === "ar"
-                                  ? "المستلزم الطبي المستهلك"
+                                  ? "اسم الصنف"
                                   : "Medical Item / Supply"}
                               </th>
                               <th className="py-2.5 px-3 text-center font-arabic border-r border-slate-300">
                                 {lang === "ar" ? "سعر الوحدة" : "Unit Price"}
                               </th>
                               <th className="py-2.5 px-3 text-center font-arabic border-r border-slate-300 w-16">
-                                {lang === "ar" ? "الكمية" : "Qty"}
+                                {lang === "ar" ? "العدد" : "Qty"}
                               </th>
                               <th className="py-2.5 px-3 text-left font-arabic">
                                 {lang === "ar"
@@ -8340,8 +8354,8 @@ export default function App() {
 
                 <p className="text-[10.5px] text-slate-500 leading-snug">
                   {lang === "ar"
-                    ? "⚠️ تنبيه: هذه الخطوة تحفظ قاعدة البيانات المشفرة بصيغة (JSON) على وحدة التخزين المحلية بجهازك، ويمكن استعادتها بأي وقت لحماية نظام الطوارئ من الفقدان المفاجئ."
-                    : "⚠️ Notice: This exports your entire database into a clean (JSON) snapshot file saved local to this device to protect your clinical workspace."}
+                    ? "⚠️ تنبيه: هذه الخطوة تحفظ قاعدة البيانات كاملة بصيغة ملف اكسيل (Excel .xlsx) يحتوي على كافة الجداول وسجلات الفواتير والمخزون لحمايتها من الفقدان."
+                    : "⚠️ Notice: This exports your entire database into a complete Excel (.xlsx) file containing all inventory and invoice records."}
                 </p>
               </div>
 
