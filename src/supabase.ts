@@ -1,19 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { MedicalItem, InvoicePayload, RestockInvoice, ReceptionOperator, sanitizeInvoiceLines } from "./types";
+import { getSupabaseConfig } from "./env";
 
-const supabaseUrl =
-  (import.meta as any).env.VITE_SUPABASE_URL ||
-  "https://acmbkoboruoqnxnswbxl.supabase.co";
-const supabaseAnonKey =
-  (import.meta as any).env.VITE_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjbWJrb2JvcnVvcW54bnN3YnhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NDA0ODgsImV4cCI6MjEwMDQxNjQ4OH0.fUSMGo_Z9F6ea_sL1i4dXgFOw4TcUhsAUi97POAfaKQ";
+const { url: supabaseUrl, anonKey: supabaseAnonKey, isConfigured: isSupabaseConfiguredFromEnv } = getSupabaseConfig();
 
-export const isSupabaseConfigured = !!(
-  supabaseUrl &&
-  supabaseAnonKey &&
-  (supabaseUrl.startsWith("http://") || supabaseUrl.startsWith("https://")) &&
-  !supabaseUrl.includes("YOUR_SUPABASE")
-);
+export const isSupabaseConfigured = isSupabaseConfiguredFromEnv;
 
 export const supabase = createClient(
   isSupabaseConfigured ? supabaseUrl : "https://placeholder.supabase.co",
